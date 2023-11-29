@@ -3,6 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# env
+sim/
+
+#samples
+mesa-examples/
+
 # C extensions
 *.so
 

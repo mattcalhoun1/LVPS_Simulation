@@ -1,0 +1,8 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/matt/projects/Pilot"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/matt/projects/Pilot"
+    ]
+}
