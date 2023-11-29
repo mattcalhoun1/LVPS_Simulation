@@ -104,7 +104,7 @@ class SearchAgent(mesa.Agent):
         self.__lvps_y = None
 
         self.__moore = True # can see in diagonal directions, not just up/down/left/right
-        self.__sight_distance = 200 # how far can see, lvps distance
+        self.__sight_distance = 150 # how far can see, lvps distance
         self.__photo_distance = 50 # how close needs to be to get a good photo, lvps distance
         self.__max_travel_distance = self.__guide.get_map().get_width() * 0.5 # how far can travel in one leg
         logging.getLogger(__name__).info(f"Robot added at {pos}")
@@ -156,7 +156,7 @@ class SearchAgent(mesa.Agent):
         # get actual position
         if self.__does_event_happen(SearchAgentActions.SuccessRate[SearchAgentActions.EstimatePosition]):
             success = True
-            lvps_x, lvps_y = self.__guide.get_lvps_coords()
+            lvps_x, lvps_y = self.__guide.get_lvps_coords(self.pos[0], self.pos[1])
 
             # corrupt the position a little bit
             self.__lvps_x = self.__get_less_accurate(lvps_x, SearchAgentActions.Accuracy[SearchAgentActions.EstimatePosition])
@@ -186,31 +186,41 @@ class SearchAgent(mesa.Agent):
             desired_slope = np.random.choice([-4, -2, -1, -1.5, -.5, 0, .5, 1, 1.5, 2, 4])
             desired_direction = np.random.choice([-1, 1]) # x go left or right
 
-            far_x = self.__lvps_x + desired_direction * self.get_sight_distance()
-            far_y = self.__lvps_y + desired_direction * desired_slope
+            x_travel = desired_direction * self.get_sight_distance()
+            far_x = self.__lvps_x + x_travel
+            far_y = self.__lvps_y + x_travel * desired_slope
+            logging.getLogger(__name__).info(f"Random travel far, want {self.__lvps_x},{self.__lvps_y} to {far_x},{far_y} - x_travel{x_travel}")
+            closer_x, closer_y = self.__guide.get_nearest_travelable_lvps_coords (self.__lvps_x, self.__lvps_y, far_x, far_y, self.get_sight_distance())
+
+            logging.getLogger(__name__).info(f"Trying from {self.__lvps_x},{self.__lvps_y} TO {closer_x}, {closer_y}, slope: {desired_slope}, dir: {desired_direction}")
 
             # must be at least some distance from any of our past few moves
             backtracking = False
             for lh in self.__look_history:
-                if self.__get_distance(self.__lvps_x, self.__lvps_y, lh[0], lh[1]) < (self.get_sight_distance() / 2):
+                if self.__get_distance(closer_x, closer_y, lh[0], lh[1]) < (self.get_sight_distance() / 2):
                     backtracking = True
 
             # if we are not backtracking, or we're running out of directions to go            
             if backtracking == False or attempts >= (max_attempts - 1):
                 sim_x, sim_y = self.__guide.get_sim_coords(self.__lvps_x, self.__lvps_y)
-                target_sim_x, target_sim_y = self.__guide.get_sim_coords(far_x, far_y)
+                target_sim_x, target_sim_y = self.__guide.get_sim_coords(closer_x, closer_y)
 
-                final_x, final_y = self.__guide.get_nearest_travelable_coords (sim_x, sim_y, target_sim_x, target_sim_y, self.get_sim_sight_distance())
+                if target_sim_x != sim_x and target_sim_y != sim_y:
+                    final_x, final_y = self.__guide.get_nearest_travelable_sim_coords (sim_x, sim_y, target_sim_x, target_sim_y, self.get_sim_sight_distance())
 
-                adjusted_x = self.__get_less_accurate(final_x, SearchAgentActions.Accuracy[SearchAgentActions.GoRandom])
-                adjusted_y = self.__get_less_accurate(final_y, SearchAgentActions.Accuracy[SearchAgentActions.GoRandom])
+                    adjusted_x = self.__get_less_accurate(final_x, SearchAgentActions.Accuracy[SearchAgentActions.GoRandom])
+                    adjusted_y = self.__get_less_accurate(final_y, SearchAgentActions.Accuracy[SearchAgentActions.GoRandom])
 
-                chosen_coords = (adjusted_x, adjusted_y)
+                    chosen_coords = (round(adjusted_x), round(adjusted_y))
 
-                logging.getLogger(__name__).info(f"Random traveling from sim coords: {sim_x},{sim_y} to {target_sim_x},{target_sim_y}")
+                    logging.getLogger(__name__).info(f"Random traveling from sim coords: {sim_x},{sim_y} to {target_sim_x},{target_sim_y}")
         
         if chosen_coords is not None:
             self.model.grid.move_agent(self, chosen_coords)
+
+            self.__lvps_x = None
+            self.__lvps_y = None
+
             return self.__does_event_happen(SearchAgentActions.GoRandom)
         
         return False
@@ -227,9 +237,11 @@ class SearchAgent(mesa.Agent):
 
         sim_x, sim_y = self.__guide.get_sim_coords(adjusted_x, adjusted_y)
 
-        next_sim_x, next_sim_y = self.__guide.get_nearest_travelable_coords (self, sim_x, sim_y, target_x, target_y, self.get_max_sim_travel_distance())
+        next_sim_x, next_sim_y = self.__guide.get_nearest_travelable_sim_coords (self, sim_x, sim_y, target_x, target_y, self.get_max_sim_travel_distance())
 
-        self.model.grid.move_agent(self, (next_sim_x, next_sim_y))        
+        self.model.grid.move_agent(self, (round(next_sim_x), round(next_sim_y)))        
+        self.__lvps_x = None
+        self.__lvps_y = None
 
         return self.__does_event_happen(SearchAgentActions.Go)
 
@@ -302,7 +314,7 @@ class SearchAgent(mesa.Agent):
     def __get_less_accurate(self, good_value, accuracy):
         # choose a random amount to mess with the calculation
         tolerance = 1 - accuracy
-        adjust_amount = random.randrange(-1 * 1000 * tolerance, 1000 * tolerance) / 1000
+        adjust_amount = random.randrange(int(-1 * 1000 * tolerance), int(1000 * tolerance)) / 1000
         return good_value + (good_value * adjust_amount)
 
 
