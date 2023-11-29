@@ -16,7 +16,7 @@ class SearchAgentActions:
         EstimatePosition : 0.94,
         Nothing : 1,
         ReportFound : 0.8,
-        GoRandom : 0.85
+        GoRandom : 0.96 # accurcy here has an oversized effect, since the coords being adjusted are mesa coords, not lvps
     }
 
     SuccessRate = {

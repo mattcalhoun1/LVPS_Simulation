@@ -8,7 +8,9 @@ from .field_guide import FieldGuide
 from lvps.generators.field_map_generator import FieldMapGenerator
 
 class AutonomousSearch(mesa.Model):
-    def __init__(self, width=120, height=120, num_robots=2, num_targets=1):
+    num_robots=1
+
+    def __init__(self, width=120, height=120, num_robots=1, num_targets=1):
         """
         Create a new search episode
 
@@ -27,8 +29,9 @@ class AutonomousSearch(mesa.Model):
 
         self.schedule = mesa.time.RandomActivationByType(self)
         self.grid = mesa.space.MultiGrid(self.width, self.height, torus=False)
-        self.datacollector = mesa.DataCollector(
-            {"SearchAgent": lambda m: m.schedule.get_type_count(SearchAgent)}
+        self.datacollector = mesa.DataCollector({
+            "TotalDistance": lambda m: m.get_total_distance_traveled()
+            },
         )
 
         guide = self.get_field_guide()
@@ -46,6 +49,7 @@ class AutonomousSearch(mesa.Model):
                 self.grid.place_agent(obstacle, (x, y))
 
         # Create agent:
+        self.__search_agents = []
         for i in range(self.num_robots):
             x,y = guide.get_random_traversable_coords()
 
@@ -54,6 +58,7 @@ class AutonomousSearch(mesa.Model):
             agent_id += 1
             self.grid.place_agent(sa, (x, y))
             self.schedule.add(sa)
+            self.__search_agents.append(sa)
 
         # create targets
         self.__targets = []
@@ -63,9 +68,16 @@ class AutonomousSearch(mesa.Model):
             agent_id += 1
             self.grid.place_agent(target_agent, (x, y))
             self.schedule.add(target_agent)
+            self.__targets.append(target_agent)
 
         self.running = True
         self.datacollector.collect(self)
+
+    def get_total_distance_traveled (self):
+        total = 0
+        for a in self.__search_agents:
+            total += a.get_total_distance_traveled()
+        return total
 
     def get_field_guide (self):
         if self.__field_guide is None:
@@ -76,9 +88,14 @@ class AutonomousSearch(mesa.Model):
     # returns targets within sight range of the given position
     def get_visible_targets (self, x, y, sight_range):
         visible_targets = []
+        logging.getLogger(__name__).info(f"Checking within {sight_range} dist from {x},{y} for target")
         for t in self.__targets:
             if self.__field_guide.is_coord_visible (sim_perspective_x = x, sim_perspective_y = y, sim_target_x = t.pos[0], sim_target_y = t.pos[1], sight_range_sim=sight_range):
+                logging.getLogger(__name__).info("Target is visible")
                 visible_targets.append(t)
+            else:
+                logging.getLogger(__name__).info(f"Target at {t.pos} is not visible")
+
 
         return visible_targets
 
@@ -112,8 +129,9 @@ class AutonomousSearch(mesa.Model):
         logging.getLogger(__name__).info(f"Search Agents: {self.schedule.get_type_count(SearchAgent)}")
 
         for i in range(step_count):
+            if self.__found:
+                return
+
             self.step()
 
-            if self.__found:
-                break
 
