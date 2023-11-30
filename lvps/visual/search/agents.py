@@ -2,28 +2,38 @@ import math
 import random
 import mesa
 import logging
-from .field_guide import FieldGuide
+#from .field_guide import FieldGuide
 from .search_agent_actions import SearchAgentActions
 from .action_strategy import ActionStrategy
 import numpy as np
 
+from field.field_renderer import FieldRenderer
+from field.field_map_persistence import FieldMapPersistence
+from field.field_scaler import FieldScaler
+
 class SearchAgent(mesa.Agent):
-    def __init__(self, unique_id, pos, model, guide : FieldGuide=None):
+    def __init__(self, unique_id, pos, model, scaler : FieldScaler=None, field_renderer : FieldRenderer = None):
         super().__init__(unique_id, model)
-        self.__guide = guide
+        self.__scaler = scaler
         self.__model = model
+        self.__field_renderer = field_renderer
         self.__unique_id = unique_id
         self.pos = pos # position within the simulation
 
         self.__step_count = 0
         self.__lvps_x = None
         self.__lvps_y = None
+        self.__lvps_heading = None
         self.__total_distance_traveled = 0
 
         self.__moore = True # can see in diagonal directions, not just up/down/left/right
         self.__sight_distance = 150 # how far can see, lvps distance
         self.__photo_distance = 50 # how close needs to be to get a good photo, lvps distance
-        self.__max_travel_distance = self.__guide.get_map().get_width() * 0.25 # how far can travel in one leg
+
+        self.__relative_search_begin = -150.0
+        self.__relative_search_end = 150.0
+
+        self.__max_travel_distance = self.__scaler.get_map().get_width() * 0.25 # how far can travel in one leg
         logging.getLogger(__name__).info(f"Robot added at {pos}")
 
         self.__curr_action = SearchAgentActions.Nothing
@@ -33,18 +43,11 @@ class SearchAgent(mesa.Agent):
         self.__look_history_size = 10 # remember this many past looks
         self.__look_history = [] # where it has already looked
 
-        self.__action_strategy = ActionStrategy()
+        self.__position_history = []
 
-    # returns fixed size look history, intended to be fed into a policy model of some sort
-    def __get_look_history (self):
-        look_memory = []
-        for h in self.__look_history:
-            look_memory.append(h)
-        
-        while len(look_memory) < self.__look_history_size:
-            look_memory.append((0,0))
-        return look_memory
-    
+        self.__action_strategy = ActionStrategy()
+        self.__is_target_found = False
+
     def get_total_distance_traveled(self):
         return self.__total_distance_traveled
 
@@ -52,16 +55,16 @@ class SearchAgent(mesa.Agent):
         return self.__max_travel_distance
     
     def get_max_sim_travel_distance (self):
-        return self.__guide.scale_lvps_distance_to_sim(self.__max_travel_distance)
+        return self.__scaler.scale_lvps_distance_to_sim(self.__max_travel_distance)
 
     def get_sim_sight_distance(self):
-        return self.__guide.scale_lvps_distance_to_sim(self.__sight_distance)
+        return self.__scaler.scale_lvps_distance_to_sim(self.__sight_distance)
 
     def get_sight_distance (self):
         return self.__sight_distance
 
     def get_sim_photo_distance(self):
-        return self.__guide.scale_lvps_distance_to_sim(self.__photo_distance)
+        return self.__scaler.scale_lvps_distance_to_sim(self.__photo_distance)
 
     def get_photo_distance (self):
         return self.__photo_distance
@@ -77,15 +80,23 @@ class SearchAgent(mesa.Agent):
         # get actual position
         if self.__does_event_happen(SearchAgentActions.SuccessRate[SearchAgentActions.EstimatePosition]):
             success = True
-            lvps_x, lvps_y = self.__guide.get_lvps_coords(self.pos[0], self.pos[1])
+            lvps_x, lvps_y = self.__scaler.get_lvps_coords(self.pos[0], self.pos[1])
 
             # corrupt the position a little bit
             self.__lvps_x = self.__get_less_accurate(lvps_x, SearchAgentActions.Accuracy[SearchAgentActions.EstimatePosition])
             self.__lvps_y = self.__get_less_accurate(lvps_y, SearchAgentActions.Accuracy[SearchAgentActions.EstimatePosition])
+            self.__lvps_heading = np.random.choice(np.arange(-180,180))
+
+            self.__position_history.append((self.__lvps_x, self.__lvps_y, self.__lvps_heading))
         else:
             self.__lvps_x = None
             self.__lvps_y = None
         return success
+
+    def is_out_of_bounds (self):
+        if self.__lvps_x is not None and self.__lvps_y is not None:
+            return not self.__scaler.get_map().is_in_bounds(self.__lvps_x, self.__lvps_y)
+        return False
 
     def is_occupied(self, pos):
         this_cell = self.model.grid.get_cell_list_contents([pos])
@@ -95,7 +106,6 @@ class SearchAgent(mesa.Agent):
         logging.getLogger(__name__).info(f"Going in random direction")
         # find neighboring coords that are open and not in our recent history
         chosen_coords = None
-        desired_dist = self.get_sight_distance()
         max_attempts = 10
         attempts = 0
         while (chosen_coords is None and attempts < max_attempts):
@@ -107,21 +117,21 @@ class SearchAgent(mesa.Agent):
             x_travel = desired_direction * self.get_sight_distance()
             far_x = self.__lvps_x + x_travel
             far_y = self.__lvps_y + x_travel * desired_slope
-            closer_x, closer_y = self.__guide.get_nearest_travelable_lvps_coords (self.__lvps_x, self.__lvps_y, far_x, far_y, self.get_sight_distance())
+            closer_x, closer_y = self.__scaler.get_nearest_travelable_lvps_coords (self.__lvps_x, self.__lvps_y, far_x, far_y, self.get_sight_distance())
 
             # must be at least some distance from any of our past few moves
             backtracking = False
-            for lh in self.__look_history:
+            for lh in self.__look_history if len(self.__look_history) < self.__look_history_size else self.__look_history[-1*self.__look_history_size:]:
                 if self.__get_distance(closer_x, closer_y, lh[0], lh[1]) < (self.get_sight_distance() / 2):
                     backtracking = True
 
             # if we are not backtracking, or we're running out of directions to go            
             if backtracking == False or attempts >= (max_attempts - 1):
-                sim_x, sim_y = self.__guide.get_sim_coords(self.__lvps_x, self.__lvps_y)
-                target_sim_x, target_sim_y = self.__guide.get_sim_coords(closer_x, closer_y)
+                sim_x, sim_y = self.__scaler.get_scaled_coords(self.__lvps_x, self.__lvps_y)
+                target_sim_x, target_sim_y = self.__scaler.get_scaled_coords(closer_x, closer_y)
 
                 if target_sim_x != sim_x and target_sim_y != sim_y:
-                    final_x, final_y = self.__guide.get_nearest_travelable_sim_coords (sim_x, sim_y, target_sim_x, target_sim_y, self.get_max_sim_travel_distance())
+                    final_x, final_y = self.__scaler.get_nearest_travelable_sim_coords (sim_x, sim_y, target_sim_x, target_sim_y, self.get_max_sim_travel_distance())
 
                     adjusted_x = self.__get_less_accurate(final_x, SearchAgentActions.Accuracy[SearchAgentActions.GoRandom])
                     adjusted_y = self.__get_less_accurate(final_y, SearchAgentActions.Accuracy[SearchAgentActions.GoRandom])
@@ -141,7 +151,7 @@ class SearchAgent(mesa.Agent):
         return False
 
     def __sim_travel (self, next_sim_x, next_sim_y):
-        self.__total_distance_traveled += self.__guide.scale_sim_to_lvps_distance(self.__get_distance(self.pos[0], self.pos[1], next_sim_x, next_sim_y))
+        self.__total_distance_traveled += self.__scaler.scale_sim_to_lvps_distance(self.__get_distance(self.pos[0], self.pos[1], next_sim_x, next_sim_y))
 
         self.model.grid.move_agent(self, (round(next_sim_x), round(next_sim_y)))
 
@@ -154,15 +164,21 @@ class SearchAgent(mesa.Agent):
         adjusted_x = self.__get_less_accurate(target_x, SearchAgentActions.Accuracy[SearchAgentActions.Go])
         adjusted_y = self.__get_less_accurate(target_y, SearchAgentActions.Accuracy[SearchAgentActions.Go])
 
-        sim_x, sim_y = self.__guide.get_sim_coords(adjusted_x, adjusted_y)
+        sim_x, sim_y = self.__scaler.get_scaled_coords(adjusted_x, adjusted_y)
 
-        next_sim_x, next_sim_y = self.__guide.get_nearest_travelable_sim_coords (sim_x, sim_y, target_x, target_y, self.get_max_sim_travel_distance())
+        next_sim_x, next_sim_y = self.__scaler.get_nearest_travelable_sim_coords (sim_x, sim_y, target_x, target_y, self.get_max_sim_travel_distance())
 
         self.__sim_travel(next_sim_x, next_sim_y)        
         self.__lvps_x = None
         self.__lvps_y = None
 
         return self.__does_event_happen(SearchAgentActions.Go)
+    
+    def go_to_safe_place (self, action_params):
+        safe_x, safe_y = self.__scaler.get_lvps_coords(*self.__scaler.get_random_traversable_coords())
+        action_params['x'] = safe_x
+        action_params['y'] = safe_y
+        return self.go(action_params=action_params)
 
     def rotate(self, action_params):
         logging.getLogger(__name__).info("Rotating")
@@ -172,7 +188,7 @@ class SearchAgent(mesa.Agent):
         lvps_target_x, lvps_target_y = self.get_nearest_photographable_target_position(
             self.__lvps_x, 
             self.__lvps_y,
-            action_params['guide'],
+            action_params['scaler'],
             action_params['agent'].get_model())
 
         # if a target is visible, this was a success
@@ -189,25 +205,29 @@ class SearchAgent(mesa.Agent):
         return self.__does_event_happen(SearchAgentActions.SuccessRate[SearchAgentActions.ReportFound])
 
 
+    def notify_event (self, event_type):
+        if event_type == 'found':
+            logging.getLogger(__name__).info(f"System notified agent {self.unique_id} the search is over")
+            self.__is_target_found = True
+        else:
+            logging.getLogger(__name__).info(f"event {event_type}")
+
+
     def look(self, action_params):
         # if we are within distance of the search target and it's not in a blind spot, or obscured, find it (random chance)
         logging.getLogger(__name__).info("Looking")
-        self.__look_history.insert(0, (self.__lvps_x, self.__lvps_y))
+        self.__look_history.insert(0, (self.__lvps_x, self.__lvps_y, self.__lvps_heading, self.__relative_search_begin, self.__relative_search_end, self.get_sight_distance()))
 
         lvps_target_x, lvps_target_y = self.get_nearest_visible_target_position(
             self.__lvps_x, 
             self.__lvps_y,
-            action_params['guide'],
+            action_params['scaler'],
             action_params['agent'].get_model())
 
         # if a target is visible, this was a success
         success = lvps_target_x is not None and lvps_target_y is not None
         if success:
             logging.getLogger(__name__).info("Found a Target visually!")
-
-        # drop old history
-        if len(self.__look_history) > self.__look_history_size:
-            del self.__look_history[len(self.__look_history) - 1]
 
         return success and self.__does_event_happen(SearchAgentActions.SuccessRate[SearchAgentActions.Look])
     
@@ -216,6 +236,21 @@ class SearchAgent(mesa.Agent):
         return True
 
     def step(self):
+        if self.__is_target_found:
+            # we are done
+            return
+        
+        # get a view of the field
+        self.__field_renderer.add_game_state(str(self.unique_id), self.__position_history, [* reversed(self.__look_history)])
+        self.__field_renderer.save_field_image(
+            f'/tmp/lvpssim/player_{self.unique_id}_step_{self.__step_count}.png',
+            add_game_state=True,
+            player_id=str(self.__unique_id),
+            other_players_visible=True
+        )
+        #self.__field_renderer.render_field_image(add_game_state=True, player_id=str(self.unique_id), other_players_visible=True)
+
+
         self.__step_count += 1
         action_map = {
             SearchAgentActions.EstimatePosition : self.estimate_position,
@@ -225,14 +260,15 @@ class SearchAgent(mesa.Agent):
             SearchAgentActions.Photograph : self.photograph,
             SearchAgentActions.GoRandom : self.go_random,
             SearchAgentActions.Nothing : self.do_nothing,
-            SearchAgentActions.ReportFound : self.report_found
+            SearchAgentActions.ReportFound : self.report_found,
+            SearchAgentActions.GoToSafePlace : self.go_to_safe_place
         }
         
         # check if current operation takes more steps
         if SearchAgentActions.StepCost[self.__curr_action] > self.__step_count - self.__curr_action_start_time:
             logging.getLogger(__name__).info("Action takes more time, waiting")
         else:
-            next_action, next_config = self.__action_strategy.get_next_action(self, self.__lvps_x, self.__lvps_y, self.__guide, self.__curr_action, self.__curr_action_result)
+            next_action, next_config = self.__action_strategy.get_next_action(self, self.__lvps_x, self.__lvps_y, self.__scaler, self.__curr_action, self.__curr_action_result)
 
             # execute the action
             self.__curr_action = next_action
@@ -256,8 +292,8 @@ class SearchAgent(mesa.Agent):
         return math.sqrt(dx**2 + dy**2)    
 
     # returns lvps coords for the nearest visible target (if any)
-    def get_nearest_visible_target_position (self, lvps_x, lvps_y, guide, model):
-        sim_x, sim_y = guide.get_sim_coords(lvps_x, lvps_y)
+    def get_nearest_visible_target_position (self, lvps_x, lvps_y, scaler, model):
+        sim_x, sim_y = scaler.get_scaled_coords(lvps_x, lvps_y)
 
         # returns the distance and direciotn of nearest target to help us decide if the robot will be able to see it
         min_dist = None
@@ -272,11 +308,11 @@ class SearchAgent(mesa.Agent):
         if closest is None:
             return None,None
         
-        return guide.get_lvps_coords(closest.pos[0], closest.pos[1])
+        return scaler.get_lvps_coords(closest.pos[0], closest.pos[1])
         
     # returns lvps coords for the nearest photographable target (if any)
-    def get_nearest_photographable_target_position (self, lvps_x, lvps_y, guide, model):
-        sim_x, sim_y = guide.get_sim_coords(lvps_x, lvps_y)
+    def get_nearest_photographable_target_position (self, lvps_x, lvps_y, scaler, model):
+        sim_x, sim_y = scaler.get_scaled_coords(lvps_x, lvps_y)
 
         # returns the distance and direciotn of nearest target to help us decide if the robot will be able to see it
         min_dist = None
@@ -289,7 +325,7 @@ class SearchAgent(mesa.Agent):
 
         if closest is None:
             return None,None
-        return guide.get_lvps_coords(closest.pos[0], closest.pos[1])
+        return scaler.get_lvps_coords(closest.pos[0], closest.pos[1])
     
 class Target(mesa.Agent):
     def __init__(self, unique_id, pos, model):

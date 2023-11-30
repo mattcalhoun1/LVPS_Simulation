@@ -32,7 +32,7 @@ class FieldGuide:
     def get_lvps_coords (self, sim_x, sim_y):
         return self.__scale_coords_up(*self.__get_unshifted_coords(sim_x, sim_y))
 
-    def get_sim_coords (self, lvps_x, lvps_y):
+    def get_scaled_coords (self, lvps_x, lvps_y):
         return self.__get_shifted_coords(*(self.__scale_coords_down(lvps_x,lvps_y)))
     
     def is_coord_visible (self, sim_perspective_x, sim_perspective_y, sim_target_x, sim_target_y, sight_range_sim):

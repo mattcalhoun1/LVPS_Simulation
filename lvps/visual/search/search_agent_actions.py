@@ -7,6 +7,7 @@ class SearchAgentActions:
     Nothing = 5
     ReportFound = 6
     GoRandom = 7
+    GoToSafePlace = 8
 
     Accuracy = {
         Go : 0.85,
@@ -16,7 +17,8 @@ class SearchAgentActions:
         EstimatePosition : 0.94,
         Nothing : 1,
         ReportFound : 0.8,
-        GoRandom : 0.96 # accurcy here has an oversized effect, since the coords being adjusted are mesa coords, not lvps
+        GoRandom : 0.96, # accurcy here has an oversized effect, since the coords being adjusted are mesa coords, not lvps
+        GoToSafePlace : 0.96 # accurcy here has an oversized effect, since the coords being adjusted are mesa coords, not lvps
     }
 
     SuccessRate = {
@@ -27,7 +29,8 @@ class SearchAgentActions:
         EstimatePosition : 0.75,
         Nothing : 1,
         ReportFound : 0.9,
-        GoRandom : 0.95
+        GoRandom : 0.95,
+        GoToSafePlace : 0.95
     }
 
     StepCost = {
@@ -38,5 +41,6 @@ class SearchAgentActions:
         EstimatePosition : 2,
         Nothing : 1,
         ReportFound : 1,
-        GoRandom : 1
+        GoRandom : 1,
+        GoToSafePlace : 2
     }
