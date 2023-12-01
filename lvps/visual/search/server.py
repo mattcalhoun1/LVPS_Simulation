@@ -71,6 +71,7 @@ model_params = {
     #    "Sheep Reproduction Rate", 0.04, 0.01, 1.0, 0.01
     #),
     "num_robots": mesa.visualization.Slider("Number of Robots", 1, 1, 10),
+    "num_targets": mesa.visualization.Slider("Number of Targets", 1, 1, 5),
     #"wolf_reproduce": mesa.visualization.Slider(
     #    "Wolf Reproduction Rate",
     #    0.05,
