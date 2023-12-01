@@ -14,6 +14,11 @@ class RandomSearchStrategy(AgentStrategy):
         }
 
         lvps_x, lvps_y, lvps_heading, lvps_confidence = lvps_agent.get_last_coords_and_heading()
+        obstacle_bound = False
+        obstacle_id = None
+
+        if lvps_x is not None:
+            obstacle_bound, obstacle_id = lvps_agent.get_lvps_environment().get_map().is_blocked(lvps_x, lvps_y)
 
         lvps_agent.get_field_renderer().save_field_image(
             f'/tmp/lvpssim/agent_{lvps_agent.get_id()}_step_{step_count}.png',
@@ -26,15 +31,27 @@ class RandomSearchStrategy(AgentStrategy):
             return SearchAgentActions.EstimatePosition, action_params
         if lvps_agent.is_out_of_bounds():
             logging.getLogger(__name__).warning(f"Agent is out of bounds, going to random location")
-            # get back in bounds
+            return SearchAgentActions.GoToSafePlace, action_params
+        elif obstacle_bound:
+            logging.getLogger(__name__).warning(f"Agent stuck in obstacle {obstacle_id}, going to random location")
             return SearchAgentActions.GoToSafePlace, action_params
         elif last_action == SearchAgentActions.ReportFound or (last_action == SearchAgentActions.Photograph and last_action_result == True):
-            action_params['x'] = lvps_x
-            action_params['y'] = lvps_y
+            lvps_target_x, lvps_target_y, lvps_target_heading = lvps_agent.get_nearest_photographable_target_position()
+
+            # get estimated x, y..sort of cheating by using known x,y iwth our est x,y. in reality, we'd be using camera angles and est dist
+            est_x, est_y = self.__get_estimated_object_x_y (lvps_target_heading, lvps_x, lvps_y, lvps_agent.get_photo_distance(), 0)
+
+            logging.getLogger(__name__).info(f"Real target at {lvps_target_x},{lvps_target_y} ... estimated: {est_x},{est_y}")
+
+            action_params['x'] = est_x
+            action_params['y'] = est_y
+            action_params['heading'] = lvps_target_heading
+            action_params['distance'] = lvps_agent.get_photo_distance()
+
             return SearchAgentActions.ReportFound, action_params
-        elif last_action == SearchAgentActions.Look and last_action_result == True:
+        elif (last_action == SearchAgentActions.Look and last_action_result == True):
             # a target should be visible
-            lvps_target_x, lvps_target_y = lvps_agent.get_nearest_visible_target_position()
+            lvps_target_x, lvps_target_y, lvps_target_heading = lvps_agent.get_nearest_visible_target_position()
             if lvps_target_x is not None:
                 # the target was sighted, if it's within photo range, take a photo
                 if self.__get_distance(lvps_x, lvps_y, lvps_target_x, lvps_target_y) <= lvps_agent.get_photo_distance():
@@ -42,6 +59,7 @@ class RandomSearchStrategy(AgentStrategy):
                 else:
                     action_params['x'] = lvps_target_x
                     action_params['y'] = lvps_target_y
+                    action_params['distance_percent'] = 0.25 # go 25% toward it
                     return SearchAgentActions.Go, action_params
         elif last_action == SearchAgentActions.EstimatePosition and last_action_result == True:
             return SearchAgentActions.Look, action_params
@@ -53,55 +71,19 @@ class RandomSearchStrategy(AgentStrategy):
         # nothing was sighted, we have a position, choose a random direction to go
         return SearchAgentActions.GoRandom, action_params
 
+    def __get_estimated_object_x_y (self, heading, x, y, obj_dist, obj_degrees):
+        # rotate degrees so zero is east and 180 is west
+        #x = r X cos( θ )
+        #y = r X sin( θ )
+        cartesian_angle_degrees = 180 - (obj_degrees - heading)
+        if cartesian_angle_degrees < 0:
+            cartesian_angle_degrees += 360
 
-    def go_random (self, action_params):
-        logging.getLogger(__name__).info(f"Going in random direction")
-        # find neighboring coords that are open and not in our recent history
-        chosen_coords = None
-        max_attempts = 10
-        attempts = 0
-        while (chosen_coords is None and attempts < max_attempts):
-            attempts += 1
-            # travel the sight distance
-            desired_slope = np.random.choice([-4, -2, -1, -1.5, -.5, 0, .5, 1, 1.5, 2, 4])
-            desired_direction = np.random.choice([-1, 1]) # x go left or right
+        logging.getLogger(__name__).info(f"Finding object position using vehicle heading: {heading}, x: {x}, y:{y}, cartesian coord angle: {cartesian_angle_degrees}")
 
-            x_travel = desired_direction * self.get_sight_distance()
-            far_x = self.__lvps_x + x_travel
-            far_y = self.__lvps_y + x_travel * desired_slope
-            closer_x, closer_y = self.__scaler.get_nearest_travelable_lvps_coords (self.__lvps_x, self.__lvps_y, far_x, far_y, self.get_sight_distance())
-
-            # must be at least some distance from any of our past few moves
-            backtracking = False
-            for lh in self.__look_history if len(self.__look_history) < self.__look_history_size else self.__look_history[-1*self.__look_history_size:]:
-                if self.__get_distance(closer_x, closer_y, lh[0], lh[1]) < (self.get_sight_distance() / 2):
-                    backtracking = True
-
-            # if we are not backtracking, or we're running out of directions to go            
-            if backtracking == False or attempts >= (max_attempts - 1):
-                sim_x, sim_y = self.__scaler.get_scaled_coords(self.__lvps_x, self.__lvps_y)
-                target_sim_x, target_sim_y = self.__scaler.get_scaled_coords(closer_x, closer_y)
-
-                if target_sim_x != sim_x and target_sim_y != sim_y:
-                    final_x, final_y = self.__scaler.get_nearest_travelable_sim_coords (sim_x, sim_y, target_sim_x, target_sim_y, self.get_max_sim_travel_distance())
-
-                    adjusted_x = self.__get_less_accurate(final_x, SearchAgentActions.Accuracy[SearchAgentActions.GoRandom])
-                    adjusted_y = self.__get_less_accurate(final_y, SearchAgentActions.Accuracy[SearchAgentActions.GoRandom])
-
-                    chosen_coords = (round(adjusted_x), round(adjusted_y))
-
-                    logging.getLogger(__name__).info(f"Random traveling from sim coords: {sim_x},{sim_y} to {final_x},{final_y}, randomly adjusted to {round(adjusted_x)},{round(adjusted_y)}")
-        
-        if chosen_coords is not None:
-            self.__sim_travel(chosen_coords[0], chosen_coords[1])
-
-            self.__lvps_x = None
-            self.__lvps_y = None
-
-            return self.__does_event_happen(SearchAgentActions.GoRandom)
-        
-        return False
-
+        est_x = x + obj_dist * math.cos(math.radians(cartesian_angle_degrees))
+        est_y = y + obj_dist * math.sin(math.radians(cartesian_angle_degrees))
+        return est_x, est_y
 
     def __get_distance(self, x1, y1, x2, y2):
         dx = x1 - x2

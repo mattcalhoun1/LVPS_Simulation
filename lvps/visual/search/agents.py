@@ -75,20 +75,24 @@ class SearchAgent(mesa.Agent):
             closer_x, closer_y = self.__scaler.get_nearest_travelable_lvps_coords (lvps_x, lvps_y, far_x, far_y, self.__lvps_sim_agent.get_sight_distance())
 
             # must be at least some distance from any of our past few moves
-            #backtracking = False
-            #for lh in self.__look_history if len(self.__look_history) < self.__look_history_size else self.__look_history[-1*self.__look_history_size:]:
-            #    if self.__get_distance(closer_x, closer_y, lh[0], lh[1]) < (self.get_sight_distance() / 2):
-            #        backtracking = True
+            backtracking = False
+            look_history = self.__lvps_sim_agent.get_look_history()
+            if len(look_history) > 1:
+                recent_history = look_history[len(look_history) - 2] # next to last. We probably alraedy looked from current coord
+                recent_x = recent_history[0]
+                recent_y = recent_history[1] 
+                if self.__get_distance(closer_x, closer_y, recent_x, recent_y) < self.__get_distance(lvps_x, lvps_y, recent_x, recent_y):
+                    backtracking = True
 
             # if we are not backtracking, or we're running out of directions to go            
-            #if backtracking == False or attempts >= (max_attempts - 1):
-            if self.__get_distance(lvps_x, lvps_y, closer_x, closer_y) >= min_travel_dist:
-                chosen_x = closer_x
-                chosen_y = closer_y
-            else:
-                logging.getLogger(__name__).info(f"Distance from {lvps_x},{lvps_y} to {chosen_x},{chosen_y} is not far enough")
-                #    final_x, final_y = self.__scaler.get_nearest_travelable_sim_coords (sim_x, sim_y, target_sim_x, target_sim_y, self.get_max_sim_travel_distance())
-                #    chosen_coords = (round(final_x), round(final_y))
+            if backtracking == False or attempts >= (max_attempts - 1):
+                if self.__get_distance(lvps_x, lvps_y, closer_x, closer_y) >= min_travel_dist:
+                    chosen_x = closer_x
+                    chosen_y = closer_y
+                #else:
+                #    logging.getLogger(__name__).info(f"Distance from {lvps_x},{lvps_y} to {closer_x},{closer_y} is not far enough")
+                #    #    final_x, final_y = self.__scaler.get_nearest_travelable_sim_coords (sim_x, sim_y, target_sim_x, target_sim_y, self.get_max_sim_travel_distance())
+                #    #    chosen_coords = (round(final_x), round(final_y))
         
         if chosen_x is not None:
             action_params['x'] = chosen_x
