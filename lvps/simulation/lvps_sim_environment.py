@@ -240,8 +240,8 @@ class LvpsSimEnvironment:
 
     def get_field_image_scaler (self):
         if self.__image_scaler is None:
-            rendered_height = 640
-            rendered_width = 640
+            rendered_height = 320
+            rendered_width = 320
             field_map = self.get_map()
 
             max_scaled_side_length = (min(rendered_height, rendered_width)) * .9
