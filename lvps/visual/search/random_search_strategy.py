@@ -1,12 +1,16 @@
 import math
 import logging
-from .search_agent_actions import SearchAgentActions
-from lvps.sim.agent_strategy import AgentStrategy
+from lvps.simulation.agent_actions import AgentActions
+from lvps.simulation.agent_strategy import AgentStrategy
 import numpy as np
+from trig.trig import BasicTrigCalc
+
+# this is a truly random strategy. it is aweful, but calls all the same methods that will be used by training
 
 class RandomSearchStrategy(AgentStrategy):
     def __init__(self):
         super().__init__()
+        self.__trig_calc = BasicTrigCalc()
 
     def get_next_action (self, lvps_agent, last_action, last_action_result, step_count):
         action_params = {
@@ -27,24 +31,32 @@ class RandomSearchStrategy(AgentStrategy):
             other_agents_visible=True)
 
         # if we don't know where we are, need to figure that out
-        if lvps_x is None or lvps_y is None:
-            return SearchAgentActions.EstimatePosition, action_params
+        if (lvps_x is None or lvps_y is None) and last_action != AgentActions.EstimatePosition:
+            # see if the last action was to estimate (and failed)
+            return AgentActions.EstimatePosition, action_params
+        elif (lvps_x is not None or lvps_y is not None) and last_action == AgentActions.EstimatePosition:
+            # look after every step
+            return AgentActions.Look, action_params
+        
+        # if we are stuck or out of bounds, reset toward the center
         if lvps_agent.is_out_of_bounds():
             logging.getLogger(__name__).warning(f"Agent is out of bounds, going to random location")
-            return SearchAgentActions.GoToSafePlace, action_params
+            return AgentActions.GoToSafePlace, action_params
         elif obstacle_bound:
             logging.getLogger(__name__).warning(f"Agent stuck in obstacle {obstacle_id}, going to random location")
-            return SearchAgentActions.GoToSafePlace, action_params
-        elif last_action == SearchAgentActions.ReportFound:
-            # need to move to a random location so we dont get stuck here
-            # even if the report fails. if we found the same item again, the report fails
-            return SearchAgentActions.GoRandom, action_params
-        elif last_action == SearchAgentActions.Photograph and last_action_result == True:
+            return AgentActions.GoToSafePlace, action_params
+
+        # if we took a photo, check it and report any findings
+        elif last_action == AgentActions.Photograph and last_action_result == True:
             lvps_target_x, lvps_target_y, lvps_target_heading = lvps_agent.get_nearest_photographable_target_position()
 
-            # get estimated x, y..sort of cheating by using known x,y iwth our est x,y. in reality, we'd be using camera angles and est dist
-            est_x, est_y = self.__get_estimated_object_x_y (lvps_target_heading, lvps_x, lvps_y, lvps_agent.get_photo_distance()/2, 0)
-
+            est_x, est_y = self.__trig_calc.get_coords_for_zeronorth_angle_and_distance (
+                heading=lvps_target_heading,
+                x = lvps_x,
+                y = lvps_y,
+                distance = lvps_agent.get_photo_distance()/2,
+                is_forward = True)
+            #est_x, est_y = self.__get_estimated_object_x_y (lvps_target_heading, lvps_x, lvps_y, lvps_agent.get_photo_distance()/2, 0)
             logging.getLogger(__name__).info(f"Real target at {lvps_target_x},{lvps_target_y} ... estimated: {est_x},{est_y}")
 
             action_params['x'] = est_x
@@ -52,55 +64,25 @@ class RandomSearchStrategy(AgentStrategy):
             action_params['heading'] = lvps_target_heading
             action_params['distance'] = lvps_agent.get_photo_distance()
 
-            return SearchAgentActions.ReportFound, action_params
-        elif (last_action == SearchAgentActions.Look and last_action_result == True):
-            # a target should be visible
-            lvps_target_x, lvps_target_y, lvps_target_heading = lvps_agent.get_nearest_visible_target_position()
-            if lvps_target_x is not None:
-                # the target was sighted, if it's within photo range, take a photo
-                photo_x, photo_y, photo_heading = lvps_agent.get_nearest_photographable_target_position()
-                #if self.__get_distance(lvps_x, lvps_y, lvps_target_x, lvps_target_y) <= lvps_agent.get_photo_distance():
-                if photo_x is not None:
-                    return SearchAgentActions.Photograph, action_params
-                else:
-                    action_params['x'] = lvps_target_x
-                    action_params['y'] = lvps_target_y
-                    action_params['distance_percent'] = 0.25 # go 25% toward it
-                    return SearchAgentActions.Go, action_params
-        elif last_action == SearchAgentActions.EstimatePosition and last_action_result == True:
-            return SearchAgentActions.Look, action_params
-        #else:
-        #    return SearchAgentActions.GoRandom, action_params
-        #    # move randomly!
-        #    #lvps_target_x, lvps_target_y = self.__get_random_coords ()
-
-        # nothing was sighted, we have a position, choose a random direction to go
-        return SearchAgentActions.GoRandom, action_params
-
-    def __get_estimated_object_x_y (self, heading, x, y, obj_dist, obj_degrees):
-        # rotate degrees so zero is east and 180 is west
-        #x = r X cos( θ )
-        #y = r X sin( θ )
-        cartesian_angle_degrees = 180 - (obj_degrees - heading)
-        if cartesian_angle_degrees < 0:
-            cartesian_angle_degrees += 360
-
-        logging.getLogger(__name__).info(f"Finding object position using vehicle heading: {heading}, x: {x}, y:{y}, cartesian coord angle: {cartesian_angle_degrees}")
-
-        # if we are looking to the right, we add to x
-        map_obj_heading = heading + obj_degrees
-        if map_obj_heading < -180:
-            map_obj_heading = 180 - abs(map_obj_heading + 180)
+            return AgentActions.ReportFound, action_params
         
-        if map_obj_heading > 0:
-            est_x = x + obj_dist * math.cos(math.radians(cartesian_angle_degrees))
-            est_y = y + obj_dist * math.sin(math.radians(cartesian_angle_degrees))
-        else:
-            est_x = x - obj_dist * math.cos(math.radians(cartesian_angle_degrees))
-            est_y = y - obj_dist * math.sin(math.radians(cartesian_angle_degrees))
-        return est_x, est_y
+        # otherwise, do something random
+        action_space = [
+            AgentActions.GoForwardShort,
+            AgentActions.GoForwardMedium,
+            AgentActions.GoForwardFar,
+            AgentActions.GoReverseShort,
+            AgentActions.GoReverseMedium,
+            AgentActions.GoReverseFar,
+            AgentActions.RotateLeftSmall,
+            AgentActions.RotateLeftMedium,
+            AgentActions.RotateLeftBig,
+            AgentActions.RotateRightSmall,
+            AgentActions.RotateRightMedium,
+            AgentActions.RotateRightBig,
+            AgentActions.Look,
+            AgentActions.Photograph,
+            AgentActions.Nothing
+        ]
 
-    def __get_distance(self, x1, y1, x2, y2):
-        dx = x1 - x2
-        dy = y1 - y2
-        return math.sqrt(dx**2 + dy**2)
+        return np.random.choice(action_space), action_params

@@ -3,12 +3,16 @@ import random
 import logging
 
 from .agents import SearchAgent, Target, Obstacle, Boundary
-from lvps.sim.lvps_sim_environment import LvpsSimEnvironment
+from lvps.simulation.lvps_sim_environment import LvpsSimEnvironment
 from field.field_scaler import FieldScaler
 from field.field_renderer import FieldRenderer
-from lvps.sim.simulated_agent import SimulatedAgent
-from lvps.sim.sim_events import SimEventType
+from lvps.simulation.simulated_agent import SimulatedAgent
+from lvps.simulation.sim_events import SimEventType
+from lvps.simulation.agent_types import AgentTypes
+from .reasonable_search_strategy import ReasonableSearchStrategy
 from .random_search_strategy import RandomSearchStrategy
+
+import numpy as np
 
 class AutonomousSearch(mesa.Model):
     num_robots = 1
@@ -73,7 +77,7 @@ class AutonomousSearch(mesa.Model):
             # this agent receives a paired agent simulation
             lvps_agent = SimulatedAgent(
                 agent_id=new_agent_id, 
-                agent_type='MecCar',
+                agent_type=np.random.choice([AgentTypes.MecCar, AgentTypes.Tank]),
                 field_renderer=field_renderer,
                 lvps_env=self.get_lvps_environment())
 
@@ -89,7 +93,7 @@ class AutonomousSearch(mesa.Model):
                 (x, y),
                 self,
                 self.get_field_sim_scaler(),
-                agent_strategy=RandomSearchStrategy(),
+                agent_strategy=self.__get_agent_strategy(),
                 lvps_agent=lvps_agent)
 
             self.grid.place_agent(sa, (x, y))
@@ -143,6 +147,18 @@ class AutonomousSearch(mesa.Model):
             sim_x, sim_y = self.__field_scaler.get_scaled_coords(lvps_x=lvps_x, lvps_y=lvps_y)
             visual_agent = self.__search_agents[agent_id]
             logging.getLogger(__name__).info(f"handle_event moving agent {agent_id} to sim position: {round(sim_x)},{round(sim_y)}")
+            
+            # if it's out of the image, move to the edge
+            if sim_x < 0:
+                sim_x = 0
+            elif sim_x >= self.__field_scaler.get_scaled_width():
+                sim_x = self.__field_scaler.get_scaled_width() - 1
+
+            if sim_y < 0:
+                sim_y = 0
+            elif sim_y >= self.__field_scaler.get_scaled_height():
+                sim_y = self.__field_scaler.get_scaled_height() - 1
+
             new_pos = (round(sim_x), round(sim_y))
             self.grid.move_agent(visual_agent, new_pos)
         elif event_type == SimEventType.TargetFound:
@@ -153,26 +169,9 @@ class AutonomousSearch(mesa.Model):
             if len(self.__found_targets) >= self.num_targets:
                 logging.getLogger(__name__).info("All targets found. search is complete")
 
-    # returns targets within sight range of the given position
-    #def get_visible_targets (self, x, y, sight_range):
-    #    visible_targets = []
-    #    logging.getLogger(__name__).info(f"Checking within {sight_range} dist from {x},{y} for target")
-    #    for t in self.__targets:
-    #        if self.__field_scaler.is_coord_visible (sim_perspective_x = x, sim_perspective_y = y, sim_target_x = t.pos[0], sim_target_y = t.pos[1], sight_range_sim=sight_range):
-    #            logging.getLogger(__name__).info("Target is visible")
-    #            visible_targets.append(t)
-    #        else:
-    #            logging.getLogger(__name__).info(f"Target at {t.pos} is not visible")
-    #
-    #
-    #    return visible_targets
-
-    #def get_distance(self, pos_1, pos_2):
-    #    x1, y1 = pos_1
-    #    x2, y2 = pos_2
-    #    dx = x1 - x2
-    #    dy = y1 - y2
-    #    return math.sqrt(dx**2 + dy**2)
+    def __get_agent_strategy (self):
+        #return RandomSearchStrategy()
+        return ReasonableSearchStrategy()
 
     def step(self):
         if len(self.__found_targets) < self.num_targets:

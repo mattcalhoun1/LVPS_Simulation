@@ -3,10 +3,10 @@ import random
 import mesa
 import logging
 #from .field_guide import FieldGuide
-from .search_agent_actions import SearchAgentActions
 import numpy as np
-from lvps.sim.simulated_agent import SimulatedAgent
-from lvps.sim.agent_strategy import AgentStrategy
+from lvps.simulation.simulated_agent import SimulatedAgent
+from lvps.simulation.agent_strategy import AgentStrategy
+from lvps.simulation.agent_actions import AgentActions
 
 from field.field_renderer import FieldRenderer
 from field.field_scaler import FieldScaler
@@ -25,7 +25,7 @@ class SearchAgent(mesa.Agent):
 
         self.__moore = True # can see in diagonal directions, not just up/down/left/right
 
-        self.__curr_action = SearchAgentActions.Nothing
+        self.__curr_action = AgentActions.Nothing
         self.__curr_action_start_time = 0
         self.__curr_action_result = True
 
@@ -45,12 +45,15 @@ class SearchAgent(mesa.Agent):
 
     # attempts to estimate current position, as LVPS does
     def estimate_position (self, action_params):
-        return self.__lvps_sim_agent.estimate_position(action_params=action_params)
+        return self.__lvps_sim_agent.estimate_position()
 
     def is_occupied(self, pos):
         this_cell = self.model.grid.get_cell_list_contents([pos])
         return any(isinstance(agent, SearchAgent) for agent in this_cell)
-    
+
+    def adjust_randomly (self, action_params):
+        return self.__lvps_sim_agent.adjust_randomly(action_params)
+
     def go_random (self, action_params):
         logging.getLogger(__name__).info(f"Going in random direction")
         # find neighboring coords that are open and not in our recent history
@@ -105,6 +108,51 @@ class SearchAgent(mesa.Agent):
     def go (self, action_params):
         return self.__lvps_sim_agent.go(action_params=action_params)
     
+    def go_forward (self, action_params):
+        return self.__lvps_sim_agent.go_forward(action_params=action_params)
+
+    def go_reverse (self, action_params):
+        return self.__lvps_sim_agent.go_reverse(action_params=action_params)
+
+    def go_forward_short (self,action_params):
+        return self.__lvps_sim_agent.go_forward_short()
+
+    def go_forward_medium (self,action_params):
+        return self.__lvps_sim_agent.go_forward_medium()
+
+    def go_forward_far (self,action_params):
+        return self.__lvps_sim_agent.go_forward_far()
+
+    def go_reverse_short (self,action_params):
+        return self.__lvps_sim_agent.go_reverse_short()
+
+    def go_reverse_medium (self,action_params):
+        return self.__lvps_sim_agent.go_reverse_medium()
+
+    def go_reverse_far (self,action_params):
+        return self.__lvps_sim_agent.go_reverse_far()
+
+    def rotate_left_small (self,action_params):
+        return self.__lvps_sim_agent.rotate_left_small()
+
+    def rotate_left_medium (self,action_params):
+        return self.__lvps_sim_agent.rotate_left_medium()
+
+    def rotate_left_big (self,action_params):
+        return self.__lvps_sim_agent.rotate_left_big()
+
+    def rotate_right_small (self,action_params):
+        return self.__lvps_sim_agent.rotate_right_small()
+
+    def rotate_right_medium (self,action_params):
+        return self.__lvps_sim_agent.rotate_right_medium()
+
+    def rotate_right_big (self,action_params):
+        return self.__lvps_sim_agent.rotate_right_big()
+
+    def adjust_randomly (self, action_params):
+        return self.__lvps_sim_agent.adjust_randomly(action_params=action_params)
+
     def go_to_safe_place (self, action_params):
         safe_x, safe_y = self.__scaler.get_random_traversable_coords()
         action_params['x'] = safe_x
@@ -115,7 +163,7 @@ class SearchAgent(mesa.Agent):
         return self.__lvps_sim_agent.rotate(action_params=action_params)
 
     def photograph(self, action_params):
-        return self.__lvps_sim_agent.photograph(action_params=action_params)
+        return self.__lvps_sim_agent.photograph()
 
     def report_found(self, action_params):
         return self.__lvps_sim_agent.report_found(action_params=action_params)
@@ -130,10 +178,10 @@ class SearchAgent(mesa.Agent):
 
 
     def look(self, action_params):
-        return self.__lvps_sim_agent.look(action_params=action_params)
+        return self.__lvps_sim_agent.look()
     
     def do_nothing (self, action_params):
-        return self.__lvps_sim_agent.do_nothing(action_params=action_params)
+        return self.__lvps_sim_agent.do_nothing()
 
     def step(self):
         if self.__is_target_found:
@@ -142,19 +190,34 @@ class SearchAgent(mesa.Agent):
         
         self.__step_count += 1
         action_map = {
-            SearchAgentActions.EstimatePosition : self.estimate_position,
-            SearchAgentActions.Go : self.go,
-            SearchAgentActions.Look : self.look,
-            SearchAgentActions.Rotate : self.rotate,
-            SearchAgentActions.Photograph : self.photograph,
-            SearchAgentActions.GoRandom : self.go_random,
-            SearchAgentActions.Nothing : self.do_nothing,
-            SearchAgentActions.ReportFound : self.report_found,
-            SearchAgentActions.GoToSafePlace : self.go_to_safe_place
+            AgentActions.EstimatePosition : self.estimate_position,
+            AgentActions.Go : self.go,
+            AgentActions.Look : self.look,
+            AgentActions.Rotate : self.rotate,
+            AgentActions.Photograph : self.photograph,
+            AgentActions.GoRandom : self.go_random,
+            AgentActions.Nothing : self.do_nothing,
+            AgentActions.ReportFound : self.report_found,
+            AgentActions.GoToSafePlace : self.go_to_safe_place,
+            AgentActions.GoForward : self.go_forward,
+            AgentActions.GoReverse : self.go_reverse,
+            AgentActions.AdjustRandomly : self.adjust_randomly,
+            AgentActions.GoForwardShort : self.go_forward_short,
+            AgentActions.GoForwardMedium : self.go_forward_medium,
+            AgentActions.GoForwardFar : self.go_forward_far,
+            AgentActions.GoReverseShort : self.go_reverse_short,
+            AgentActions.GoReverseMedium : self.go_reverse_medium,
+            AgentActions.GoReverseFar : self.go_reverse_far,
+            AgentActions.RotateLeftSmall : self.rotate_left_small,
+            AgentActions.RotateLeftMedium : self.rotate_left_medium,
+            AgentActions.RotateLeftBig : self.rotate_left_big,
+            AgentActions.RotateRightSmall : self.rotate_right_small,
+            AgentActions.RotateRightMedium : self.rotate_right_medium,
+            AgentActions.RotateRightBig : self.rotate_right_big
         }
         
         # check if current operation takes more steps
-        if SearchAgentActions.StepCost[self.__curr_action] > self.__step_count - self.__curr_action_start_time:
+        if AgentActions.StepCost[self.__curr_action] > self.__step_count - self.__curr_action_start_time:
             logging.getLogger(__name__).info("Action takes more time, waiting")
         else:
             next_action, next_config = self.__agent_strategy.get_next_action(self.__lvps_sim_agent, self.__curr_action, self.__curr_action_result, self.__step_count)
