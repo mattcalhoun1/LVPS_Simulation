@@ -175,14 +175,15 @@ class AutonomousSearch(mesa.Model):
     #    return math.sqrt(dx**2 + dy**2)
 
     def step(self):
-        self.schedule.step()
-        self.datacollector.collect(self)
+        if len(self.__found_targets) < self.num_targets:
+            self.schedule.step()
+            self.datacollector.collect(self)
 
     def run_model(self, step_count=200):
         logging.getLogger(__name__).info(f"Search Agents: {self.schedule.get_type_count(SearchAgent)}")
 
         for i in range(step_count):
-            if len(self.__found_targets) < self.num_targets:
+            if len(self.__found_targets) >= self.num_targets:
                 return
 
             self.step()

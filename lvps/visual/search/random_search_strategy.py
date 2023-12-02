@@ -43,7 +43,7 @@ class RandomSearchStrategy(AgentStrategy):
             lvps_target_x, lvps_target_y, lvps_target_heading = lvps_agent.get_nearest_photographable_target_position()
 
             # get estimated x, y..sort of cheating by using known x,y iwth our est x,y. in reality, we'd be using camera angles and est dist
-            est_x, est_y = self.__get_estimated_object_x_y (lvps_target_heading, lvps_x, lvps_y, lvps_agent.get_photo_distance(), 0)
+            est_x, est_y = self.__get_estimated_object_x_y (lvps_target_heading, lvps_x, lvps_y, lvps_agent.get_photo_distance()/2, 0)
 
             logging.getLogger(__name__).info(f"Real target at {lvps_target_x},{lvps_target_y} ... estimated: {est_x},{est_y}")
 
@@ -58,7 +58,9 @@ class RandomSearchStrategy(AgentStrategy):
             lvps_target_x, lvps_target_y, lvps_target_heading = lvps_agent.get_nearest_visible_target_position()
             if lvps_target_x is not None:
                 # the target was sighted, if it's within photo range, take a photo
-                if self.__get_distance(lvps_x, lvps_y, lvps_target_x, lvps_target_y) <= lvps_agent.get_photo_distance():
+                photo_x, photo_y, photo_heading = lvps_agent.get_nearest_photographable_target_position()
+                #if self.__get_distance(lvps_x, lvps_y, lvps_target_x, lvps_target_y) <= lvps_agent.get_photo_distance():
+                if photo_x is not None:
                     return SearchAgentActions.Photograph, action_params
                 else:
                     action_params['x'] = lvps_target_x
@@ -85,8 +87,17 @@ class RandomSearchStrategy(AgentStrategy):
 
         logging.getLogger(__name__).info(f"Finding object position using vehicle heading: {heading}, x: {x}, y:{y}, cartesian coord angle: {cartesian_angle_degrees}")
 
-        est_x = x + obj_dist * math.cos(math.radians(cartesian_angle_degrees))
-        est_y = y + obj_dist * math.sin(math.radians(cartesian_angle_degrees))
+        # if we are looking to the right, we add to x
+        map_obj_heading = heading + obj_degrees
+        if map_obj_heading < -180:
+            map_obj_heading = 180 - abs(map_obj_heading + 180)
+        
+        if map_obj_heading > 0:
+            est_x = x + obj_dist * math.cos(math.radians(cartesian_angle_degrees))
+            est_y = y + obj_dist * math.sin(math.radians(cartesian_angle_degrees))
+        else:
+            est_x = x - obj_dist * math.cos(math.radians(cartesian_angle_degrees))
+            est_y = y - obj_dist * math.sin(math.radians(cartesian_angle_degrees))
         return est_x, est_y
 
     def __get_distance(self, x1, y1, x2, y2):
