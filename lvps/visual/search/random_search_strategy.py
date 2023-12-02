@@ -35,7 +35,11 @@ class RandomSearchStrategy(AgentStrategy):
         elif obstacle_bound:
             logging.getLogger(__name__).warning(f"Agent stuck in obstacle {obstacle_id}, going to random location")
             return SearchAgentActions.GoToSafePlace, action_params
-        elif last_action == SearchAgentActions.ReportFound or (last_action == SearchAgentActions.Photograph and last_action_result == True):
+        elif last_action == SearchAgentActions.ReportFound:
+            # need to move to a random location so we dont get stuck here
+            # even if the report fails. if we found the same item again, the report fails
+            return SearchAgentActions.GoRandom, action_params
+        elif last_action == SearchAgentActions.Photograph and last_action_result == True:
             lvps_target_x, lvps_target_y, lvps_target_heading = lvps_agent.get_nearest_photographable_target_position()
 
             # get estimated x, y..sort of cheating by using known x,y iwth our est x,y. in reality, we'd be using camera angles and est dist
