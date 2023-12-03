@@ -22,7 +22,7 @@ register(
 class Train:
     def __init__(self, model_dir):
         self.__model_dir = model_dir
-        self.__max_episode_steps = 500_000 # max steps per episode
+        self.__max_episode_steps = 10_000 # max steps per episode
         self.__max_total_steps = 500_000
 
         # create new instances of the environment
@@ -36,6 +36,7 @@ class Train:
         self.__base_env = AutoResetWrapper(TimeLimit(gymnasium.make(env_id), self.__max_episode_steps))
         #self.__base_envs = make_vec_env(env_id=env_id, n_envs=env_count, seed=0)
         #self.__eval_envs = make_vec_env(env_id=env_id, n_envs=env_count, seed=0)
+        self.__eval_env = AutoResetWrapper(TimeLimit(gymnasium.make(env_id), self.__max_episode_steps))
         self.__test_env = gymnasium.make(env_id, render_mode='console')        
 
     def __create_empty_model (self, base_env):
@@ -67,7 +68,7 @@ class Train:
         logging.getLogger(__name__).info ("Training a new agent...")
         # create a new empty model
         model = self.__create_empty_model(self.__base_env)
-        self.__recreate_eval_callback(self.__base_env)
+        self.__recreate_eval_callback(self.__eval_env)
 
         model = model.learn(total_timesteps=self.__max_total_steps, callback=self.__eval_callback, log_interval=1, progress_bar=True)
 
@@ -80,7 +81,7 @@ class Train:
 
     def __recreate_eval_callback(self, environment):
         self.__eval_callback = EvalCallback(
-            environment, n_eval_episodes=20, eval_freq=1000,
+            environment, eval_freq=10000,
             best_model_save_path=f'{self.__model_dir}/evaluation/', log_path=f'{self.__model_dir}/evaluation/', warn=False
         )        
 
