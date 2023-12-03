@@ -81,7 +81,7 @@ class Train:
 
     def __recreate_eval_callback(self, environment):
         self.__eval_callback = EvalCallback(
-            environment, eval_freq=10000,
+            environment, eval_freq=5000,
             best_model_save_path=f'{self.__model_dir}/evaluation/', log_path=f'{self.__model_dir}/evaluation/', warn=False
         )        
 
