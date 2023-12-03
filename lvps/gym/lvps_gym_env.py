@@ -17,7 +17,7 @@ class LvpsGymEnv(gym.Env):
 
     metadata = {"render_modes": ["console"]}
 
-    def __init__(self):
+    def __init__(self, render_mode=None):
         super().__init__()
 
         self.__scaled_map_height = 400

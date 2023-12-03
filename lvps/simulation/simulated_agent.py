@@ -43,6 +43,10 @@ class SimulatedAgent:
         self.__degrees_adjust_medium = 33
         self.__degrees_adjust_big = 45
         
+        self.__last_photo_x = None
+        self.__last_photo_y = None
+        self.__last_photo_heading = None
+
         self.__trig_calc = BasicTrigCalc()
 
         if self.__lvps_x is None:
@@ -305,11 +309,22 @@ class SimulatedAgent:
         success = success and self.__does_event_happen(AgentActions.SuccessRate[AgentActions.Photograph])
         logging.getLogger(__name__).info(f"~~~~~~~~ Photographing {'was' if success else 'was not'} successful ~~~~~~~~~~~~~~")
 
+
+        if success:
+            self.__last_photo_x = self.__lvps_x
+            self.__last_photo_y = self.__lvps_y
+            self.__last_photo_heading = self.__lvps_heading
+
         return success
 
     def report_found(self):
         if not self.__has_recent_position():
             return False
+
+        # if we've moved since the photograph, we can't report
+        if self.__last_photo_x != self.__lvps_x or self.__last_photo_y != self.__lvps_y or self.__last_photo_heading != self.__lvps_heading:
+            return False
+
 
         # this is sort of cheating, as we are using the known coords in this case. In reality, we would be estimated the 
         # position, not calculating it.
