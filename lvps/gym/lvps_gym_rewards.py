@@ -9,6 +9,9 @@ class RewardAmounts:
 
     FalseReport = -10
 
+    SuccessfulLook = 2
+    SuccessfulPhotograph = 5
+
     SomeAgentFoundTarget = 500
     ThisAgentFoundTarget = 500
 
@@ -41,6 +44,12 @@ class LvpsGymRewards:
             reward += RewardAmounts.FalseReport
 
         ###### Rewards #######
+        if action_performed == AgentActions.Look and action_result == True:
+            reward += RewardAmounts.SuccessfulLook
+
+        if action_performed == AgentActions.Photograph and action_result == True:
+            reward += RewardAmounts.SuccessfulPhotograph
+
         if target_found:
             reward += RewardAmounts.SomeAgentFoundTarget
         

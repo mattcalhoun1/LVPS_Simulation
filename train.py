@@ -3,6 +3,7 @@ from gymnasium.envs.registration import register
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3 import DQN
 from stable_baselines3.common.callbacks import EvalCallback
+from gymnasium.wrappers.time_limit import TimeLimit
 from stable_baselines3.common.env_util import make_vec_env
 from lvps.gym.rbean_utils import evaluate, SB3Agent
 import warnings
@@ -20,6 +21,7 @@ register(
 class Train:
     def __init__(self, model_dir):
         self.__model_dir = model_dir
+        self.__max_episode_steps = 3000 # max steps per episode
 
         # create new instances of the environment
         self.__create_environments('lvps/Search-v0')
@@ -29,7 +31,7 @@ class Train:
         self.__eval_callback = None
 
     def __create_environments (self, env_id):
-        self.__base_env = gymnasium.make(env_id)
+        self.__base_env = TimeLimit(gymnasium.make(env_id), self.__max_episode_steps)
         #self.__base_envs = make_vec_env(env_id=env_id, n_envs=env_count, seed=0)
         #self.__eval_envs = make_vec_env(env_id=env_id, n_envs=env_count, seed=0)
         self.__test_env = gymnasium.make(env_id, render_mode='console')        
@@ -54,7 +56,7 @@ class Train:
             exploration_final_eps = 0.07, # original 0.07
 
             #policy_kwargs = dict(net_arch=[256,128,64]),
-            verbose=0,
+            verbose=1,
             seed=1
         )
 
