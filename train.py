@@ -22,21 +22,22 @@ class Train:
         self.__model_dir = model_dir
 
         # create new instances of the environment
-        self.__create_environments('lvps/Search-v0', 4)
+        self.__create_environments('lvps/Search-v0')
 
         if os.path.exists(f'{model_dir}/evaluation/'):
             shutil.rmtree(f'{model_dir}/evaluation/')
         self.__eval_callback = None
 
-    def __create_environments (self, env_id, env_count = 4):
-        self.__base_envs = make_vec_env(env_id=env_id, n_envs=env_count, seed=0)
-        self.__eval_envs = make_vec_env(env_id=env_id, n_envs=env_count, seed=0)
+    def __create_environments (self, env_id):
+        self.__base_env = gymnasium.make(env_id)
+        #self.__base_envs = make_vec_env(env_id=env_id, n_envs=env_count, seed=0)
+        #self.__eval_envs = make_vec_env(env_id=env_id, n_envs=env_count, seed=0)
         self.__test_env = gymnasium.make(env_id, render_mode='console')        
 
-    def __create_empty_model (self, base_envs):
+    def __create_empty_model (self, base_env):
         return DQN(
-            policy = "MlpPolicy",
-            env = base_envs,
+            policy = "CnnPolicy",#"MlpPolicy",
+            env = base_env,
             learning_rate = 4e-3, # original 4e-3
 
             batch_size = 128, # original 128
@@ -52,7 +53,7 @@ class Train:
             exploration_initial_eps = 1.0, # original 1.0
             exploration_final_eps = 0.07, # original 0.07
 
-            policy_kwargs = dict(net_arch=[256,128,64]),
+            #policy_kwargs = dict(net_arch=[256,128,64]),
             verbose=0,
             seed=1
         )
@@ -61,8 +62,8 @@ class Train:
     def train (self):
         logging.getLogger(__name__).info ("Training a new agent...")
         # create a new empty model
-        model = self.__create_empty_model(self.__base_envs)
-        self.__recreate_eval_callback(self.__base_envs)
+        model = self.__create_empty_model(self.__base_env)
+        self.__recreate_eval_callback(self.__base_env)
 
         model = model.learn(total_timesteps=200_000, callback=self.__eval_callback)
 
@@ -73,14 +74,14 @@ class Train:
 
         _ = evaluate(self.__test_env, sb3_agent, gamma=1.0, episodes=50, max_steps=200, seed=1)
 
-    def __recreate_eval_callback(self, environments):
+    def __recreate_eval_callback(self, environment):
         self.__eval_callback = EvalCallback(
-            environments, n_eval_episodes=20, eval_freq=1000,
+            environment, n_eval_episodes=20, eval_freq=1000,
             best_model_save_path=f'{self.__model_dir}/evaluation/', log_path=f'{self.__model_dir}/evaluation/', warn=False
         )        
 
-    def check_env (self):
-        check_env(self.__lvps_gym_env)
+    #def check_env (self):
+    #    check_env(self.__lvps_gym_env)
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s [%(levelname)s] %(module)s:%(message)s', level=logging.INFO)
