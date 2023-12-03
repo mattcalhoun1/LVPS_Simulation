@@ -42,12 +42,12 @@ class Train:
             env = base_env,
             learning_rate = 4e-3, # original 4e-3
 
-            batch_size = 128, # original 128
+            batch_size = 64, # original 128
             buffer_size = 10_000, # original 10k
             learning_starts = 0, # original 0
 
             gamma = 0.98, # original 0.98
-            target_update_interval = 600, # original 600
+            target_update_interval = 10, # original 600
             train_freq = 16, # original 16
             gradient_steps = 8, # original 8
 
