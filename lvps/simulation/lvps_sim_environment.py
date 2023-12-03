@@ -7,7 +7,7 @@ from lvps.generators.random_field_map_generator import RandomFieldMapGenerator
 from field.field_scaler import FieldScaler
 from trig.trig import BasicTrigCalc
 from position.confidence import Confidence
-from lvps.simulation.agent_actions import AgentActions
+from lvps.strategies.agent_actions import AgentActions
 from lvps.simulation.sim_events import SimEventSubscriptions, SimEventType
 
 class LvpsSimEnvironment:
@@ -54,9 +54,9 @@ class LvpsSimEnvironment:
             est_y = self.__get_less_accurate(agent['y'], AgentActions.Accuracy[AgentActions.EstimatePosition][confidence], range_val=self.get_map().get_length())
             est_heading = self.__get_less_accurate(agent['heading'], AgentActions.Accuracy[AgentActions.Heading][confidence], range_val=360)
 
-            logging.getLogger(__name__).info(f"Agent {agent_id} positiong successful. ({est_x},{est_y}) : {round(est_heading,1)} deg ")
+            logging.getLogger(__name__).debug(f"Agent {agent_id} positiong successful. ({est_x},{est_y}) : {round(est_heading,1)} deg ")
         else:
-            logging.getLogger(__name__).info(f"Positioning failed for agent {agent_id}")
+            logging.getLogger(__name__).debug(f"Positioning failed for agent {agent_id}")
 
         return est_x, est_y, est_heading, confidence
 
@@ -73,7 +73,7 @@ class LvpsSimEnvironment:
 
             self.__event_subscriptions.notify_subscribers(SimEventType.AgentRotated, {'agent_id':agent_id, 'heading':new_heading})
 
-            logging.getLogger(__name__).info(f"{agent_id} wanted go rotate {degrees}, actual: {actual_adjust}, old: {curr_heading}, new: {new_heading}")
+            logging.getLogger(__name__).debug(f"{agent_id} wanted go rotate {degrees}, actual: {actual_adjust}, old: {curr_heading}, new: {new_heading}")
         return False
 
     # moves forward or backward without affecting rotation
@@ -96,7 +96,7 @@ class LvpsSimEnvironment:
             # find the point in the desired direction
             next_x, next_y = self.__get_next_position(heading=adjusted_heading, x=starting_x, y=starting_y, distance=adjusted_distance, forward=forward)
 
-            logging.getLogger(__name__).info(f"Facing {round(heading)} - going {'forward' if forward else 'reverse'} by {round(distance)} would end up at ({round(next_x)}, {round(next_y)})")
+            logging.getLogger(__name__).debug(f"Facing {round(heading)} - going {'forward' if forward else 'reverse'} by {round(distance)} would end up at ({round(next_x)}, {round(next_y)})")
 
             # if path is not open, make the new position on the obstacle, so the agent is penalized
             is_blocked, obstacle_id = self.__map.is_path_blocked(starting_x, starting_y, next_x, next_y, agent['agent'].get_path_width())
@@ -108,7 +108,7 @@ class LvpsSimEnvironment:
                 self.__agents[agent_id]['y'] = o_ymin + .5 * (o_ymax - o_ymin)
                 self.__agents[agent_id]['heading'] = heading
             else:
-                logging.getLogger(__name__).info(f"Agent {agent_id} successfully traveled from {self.__agents[agent_id]['x']},{self.__agents[agent_id]['y']} to {next_x,next_y} and is still facing {heading}")
+                logging.getLogger(__name__).debug(f"Agent {agent_id} successfully traveled from {self.__agents[agent_id]['x']},{self.__agents[agent_id]['y']} to {next_x,next_y} and is still facing {heading}")
                 self.__agents[agent_id]['x'] = next_x
                 self.__agents[agent_id]['y'] = next_y
                 self.__agents[agent_id]['heading'] = heading
@@ -118,7 +118,7 @@ class LvpsSimEnvironment:
         return False
     
     def go_forward (self, agent_id, distance):
-        logging.getLogger(__name__).info(f"Agent {agent_id} going forward for distance {distance}")
+        logging.getLogger(__name__).debug(f"Agent {agent_id} going forward for distance {distance}")
         return self.__go_straight(
             agent_id=agent_id,
             forward=True,
@@ -127,7 +127,7 @@ class LvpsSimEnvironment:
             accuracy=AgentActions.SuccessRate[AgentActions.GoForward])
 
     def go_reverse (self, agent_id, distance):
-        logging.getLogger(__name__).info(f"Agent {agent_id} going reverse for distance {distance}")
+        logging.getLogger(__name__).debug(f"Agent {agent_id} going reverse for distance {distance}")
         return self.__go_straight(
             agent_id=agent_id,
             forward=False,
@@ -136,7 +136,7 @@ class LvpsSimEnvironment:
             accuracy=AgentActions.SuccessRate[AgentActions.GoReverse])
 
     def strafe_left (self, agent_id, distance):
-        logging.getLogger(__name__).info(f"Agent {agent_id} strafing left for distance {distance}")
+        logging.getLogger(__name__).debug(f"Agent {agent_id} strafing left for distance {distance}")
         return self.__go_straight(
             agent_id=agent_id,
             forward=True,
@@ -146,7 +146,7 @@ class LvpsSimEnvironment:
             heading_offset=-90.0)
 
     def strafe_right (self, agent_id, distance):
-        logging.getLogger(__name__).info(f"Agent {agent_id} strafing right for distance {distance}")
+        logging.getLogger(__name__).debug(f"Agent {agent_id} strafing right for distance {distance}")
         return self.__go_straight(
             agent_id=agent_id,
             forward=True,
@@ -163,23 +163,8 @@ class LvpsSimEnvironment:
                 distance = distance,
                 is_forward = forward)
 
-        # rotate degrees so zero is east and 180 is west
-        #x = r X cos( θ )
-        #y = r X sin( θ )
-        #cart_heading = self.__trig_calc.convert_heading_to_cartesian(heading)
-        #logging.getLogger(__name__).info(f"Finding next position using vehicle heading: {heading} (cartesian: {cart_heading}), x: {x}, y:{y} at distance {distance}")
-
-        # if we are looking to the right, we add to x
-        #if (heading > 0 and forward) or (heading < 0 and forward == False):
-        #    est_x = x + distance * math.cos(math.radians(cart_heading))
-        #    est_y = y + distance * math.sin(math.radians(cart_heading))
-        #else:
-        #    est_x = x - distance * math.cos(math.radians(cart_heading))
-        #    est_y = y - distance * math.sin(math.radians(cart_heading))
-        #return est_x, est_y
-
     def go (self, agent_id, target_x, target_y):
-        logging.getLogger(__name__).info(f"Agent {agent_id} going toward {target_x},{target_y}")
+        logging.getLogger(__name__).debug(f"Agent {agent_id} going toward {target_x},{target_y}")
 
         adjusted_x = self.__get_less_accurate(target_x, AgentActions.Accuracy[AgentActions.Go], range_val=self.__map.get_width())
         adjusted_y = self.__get_less_accurate(target_y, AgentActions.Accuracy[AgentActions.Go], range_val=self.__map.get_length())
@@ -191,7 +176,7 @@ class LvpsSimEnvironment:
             end_y = adjusted_y)
 
         if self.__does_event_happen(AgentActions.SuccessRate[AgentActions.Go]):
-            logging.getLogger(__name__).info(f"Agent {agent_id} successfully traveled from {self.__agents[agent_id]['x']},{self.__agents[agent_id]['y']} to {adjusted_x,adjusted_y} and is now facing {new_heading}")
+            logging.getLogger(__name__).debug(f"Agent {agent_id} successfully traveled from {self.__agents[agent_id]['x']},{self.__agents[agent_id]['y']} to {adjusted_x,adjusted_y} and is now facing {new_heading}")
             self.__agents[agent_id]['x'] = adjusted_x
             self.__agents[agent_id]['y'] = adjusted_y
             self.__agents[agent_id]['heading'] = new_heading
@@ -199,7 +184,7 @@ class LvpsSimEnvironment:
             self.__event_subscriptions.notify_subscribers(SimEventType.AgentMoved, {'agent_id':agent_id, 'x':adjusted_x, 'y':adjusted_y, 'heading':new_heading})
             return True
         else:
-            logging.getLogger(__name__).info(f"Agent {agent_id} travel attempt failed")
+            logging.getLogger(__name__).debug(f"Agent {agent_id} travel attempt failed")
             return False
 
     def __get_relative_heading_end (self, start_x, start_y, end_x, end_y):
@@ -289,7 +274,7 @@ class LvpsSimEnvironment:
         agent_x = self.__agents[agent_id]['x']
         agent_y = self.__agents[agent_id]['y']
 
-        logging.getLogger(__name__).info(f"For agent {agent_id}, checking within {sight_distance} dist from {agent_x},{agent_y} for target")
+        logging.getLogger(__name__).debug(f"For agent {agent_id}, checking within {sight_distance} dist from {agent_x},{agent_y} for target")
         for tid in self.__targets:
             target = self.__targets[tid]
             if agent.get_field_renderer().get_map_scaler().is_lvps_coord_visible (
@@ -308,11 +293,11 @@ class LvpsSimEnvironment:
                 )
 
                 if relative_degrees >= agent.get_relative_search_begin() and relative_degrees <= agent.get_relative_search_end():
-                    logging.getLogger(__name__).info(f"Target {target['name']}) is visible to {agent_id}")
+                    logging.getLogger(__name__).debug(f"Target {target['name']}) is visible to {agent_id}")
                     visible_targets.append(target)
                     visible_headings.append(relative_degrees)
                 else:
-                    logging.getLogger(__name__).info(f"Target {target['name']} is close to agent {agent_id}, but in its blind spot")
+                    logging.getLogger(__name__).debug(f"Target {target['name']} is close to agent {agent_id}, but in its blind spot")
 
 
         return visible_targets, visible_headings
@@ -340,7 +325,7 @@ class LvpsSimEnvironment:
 
     # tells whether the given target is already found
     def is_target_found (self, agent_id, x, y):
-        logging.getLogger(__name__).info(f"Agent {agent_id} checking if target at ({x},{y}) is already found")
+        #logging.getLogger(__name__).info(f"Agent {agent_id} checking if target at ({x},{y}) is already found")
         closest_target = self.__find_closest_target(x, y)
 
         return closest_target is not None and closest_target in self.__found_targets
@@ -358,6 +343,9 @@ class LvpsSimEnvironment:
             logging.getLogger(__name__).info("There is no target at that location")
         else:
             logging.getLogger(__name__).info(f"Target {closest_target} was successfuly found by {agent_id}")
+            return True # inform agent the target found was good
+        
+        return False
 
     def get_num_found_targets (self):
         return len(self.__found_targets)
@@ -379,7 +367,7 @@ class LvpsSimEnvironment:
         elif closest_dist <= (self.__target_find_position_threshold) * min(self.get_map().get_width(), self.get_map().get_length()):
             return closest_target
         else:
-            logging.getLogger(__name__).info(f"Target {closest_target} at a distance of {closest_dist} is higher than the threshold dist:  {(self.__target_find_position_threshold) * min(self.get_map().get_width(), self.get_map().get_length())}")
+            logging.getLogger(__name__).debug(f"Target {closest_target} at a distance of {closest_dist} is higher than the threshold dist:  {(self.__target_find_position_threshold) * min(self.get_map().get_width(), self.get_map().get_length())}")
         return None
 
     # finds the agent closest to the given agent

@@ -3,7 +3,7 @@ import random
 import mesa
 import logging
 #from .field_guide import FieldGuide
-from .agent_actions import AgentActions
+from lvps.strategies.agent_actions import AgentActions
 from .agent_types import AgentTypes
 import numpy as np
 
@@ -11,6 +11,7 @@ from field.field_renderer import FieldRenderer
 from field.field_map_persistence import FieldMapPersistence
 from field.field_scaler import FieldScaler
 from .lvps_sim_environment import LvpsSimEnvironment
+from trig.trig import BasicTrigCalc
 
 # represents a simulation for a single agent's perspective
 
@@ -20,9 +21,7 @@ class SimulatedAgent:
         self.__agent_id = agent_id
         self.__lvps_env = lvps_env
         self.__agent_type = agent_type
-        #self.__agent_strategy = agent_strategy
 
-        self.__step_count = 0
         self.__lvps_x = initial_x
         self.__lvps_y = initial_y
         self.__lvps_heading = initial_heading
@@ -44,15 +43,12 @@ class SimulatedAgent:
         self.__degrees_adjust_medium = 33
         self.__degrees_adjust_big = 45
         
+        self.__trig_calc = BasicTrigCalc()
 
         if self.__lvps_x is None:
             logging.getLogger(__name__).info(f"Agent {agent_id} added to LVPS simulation with no awareness of its current position.")
         else:
             logging.getLogger(__name__).info(f"Agent {agent_id} added to LVPS simulation, known to be at {self.__lvps_x}, {self.__lvps_y}.")
-
-        #self.__curr_action = AgentActions.Nothing
-        #self.__curr_action_start_time = 0
-        #self.__curr_action_result = True
 
         self.__look_history = [] # where it has already looked
 
@@ -96,7 +92,7 @@ class SimulatedAgent:
 
     # attempts to estimate current position, as LVPS does
     def estimate_position (self):
-        logging.getLogger(__name__).info("Estimate position")
+        logging.getLogger(__name__).debug(f"Agent {self.__agent_id} Estimate position")
         success = False
 
         lvps_x, lvps_y, heading, confidence = self.__lvps_env.estimate_agent_position(self.__agent_id)
@@ -126,8 +122,15 @@ class SimulatedAgent:
 
     def is_out_of_bounds (self):
         if self.__lvps_x is not None and self.__lvps_y is not None:
-            return not self.__lvps_env.get_map().is_in_bounds(self.__lvps_x, self.__lvps_y)
+            return not self.__lvps_env.get_map().is_in_bounds(self.__lvps_x, self.__lvps_y, self.get_path_width())
         return False
+
+    def is_in_obstacle (self):
+        if self.__lvps_x is not None and self.__lvps_y is not None:
+            blocked, obstacle_id = self.__lvps_env.get_map().is_blocked(self.__lvps_x, self.__lvps_y, self.get_path_width())
+            return blocked
+        return False
+
 
     def go_forward (self, action_params):
         success = self.__lvps_env.go_forward(self.__agent_id, action_params['distance'])
@@ -152,7 +155,7 @@ class SimulatedAgent:
         return success
 
     def adjust_randomly (self, action_params):
-        logging.getLogger(__name__).info(f"Agent {self.__agent_id} Adjusting randomly")
+        logging.getLogger(__name__).debug(f"Agent {self.__agent_id} Adjusting randomly")
         success = True
 
         move_methods = [
@@ -236,7 +239,7 @@ class SimulatedAgent:
         
 
     def go (self, action_params):
-        logging.getLogger(__name__).info(f"Going toward {action_params['x']},{action_params['y']}")
+        logging.getLogger(__name__).debug(f"Going toward {action_params['x']},{action_params['y']}")
 
         target_x = action_params['x']
         target_y = action_params['y']
@@ -249,7 +252,7 @@ class SimulatedAgent:
                 self.__lvps_y, 
                 target_x, target_y,
                 max_dist=full_dist * action_params['distance_percent'])
-            logging.getLogger(__name__).info(f"Shortened desired new position from {action_params['x']},{action_params['y']} to new target of {target_x},{target_y}")
+            logging.getLogger(__name__).debug(f"Shortened desired new position from {action_params['x']},{action_params['y']} to new target of {target_x},{target_y}")
 
         start_x = self.__lvps_x
         start_y = self.__lvps_y
@@ -281,7 +284,7 @@ class SimulatedAgent:
 
 
     def photograph(self):
-        logging.getLogger(__name__).info("Photographing")
+        logging.getLogger(__name__).info(f"Agent {self.__agent_id} photographing")
 
         lvps_target_x, lvps_target_y, lvps_target_heading = self.get_nearest_photographable_target_position()
         #self.__look_history.insert(0, (self.__lvps_x, self.__lvps_y, self.__lvps_heading, self.__relative_search_begin, self.__relative_search_end, self.get_photo_distance()))
@@ -295,25 +298,28 @@ class SimulatedAgent:
 
         return success
 
-    def report_found(self, action_params):
-        logging.getLogger(__name__).info(f"Reporting found at: {action_params['x']},{action_params['y']}")
+    def report_found(self):
+        # this is sort of cheating, as we are using the known coords in this case. In reality, we would be estimated the 
+        # position, not calculating it.
+        lvps_target_x, lvps_target_y, lvps_target_heading = self.get_nearest_photographable_target_position()
+
+        est_x, est_y = self.__trig_calc.get_coords_for_zeronorth_angle_and_distance (
+            heading=lvps_target_heading,
+            x = self.__lvps_x,
+            y = self.__lvps_y,
+            distance = self.__get_distance(self.__lvps_x, self.__lvps_y, lvps_target_x, lvps_target_y),
+            is_forward = True)
+
+
+        # if the report turns out to be false, there will be a penalty. If it's true, there will be a big reward.
+        logging.getLogger(__name__).info(f"Reporting found at: {est_x},{est_y}")
         if self.__does_event_happen(AgentActions.SuccessRate[AgentActions.ReportFound]):
-            self.__lvps_env.report_target_found (agent_id = self.__agent_id, x=action_params['x'], y=action_params['y'])
-            return True
+            return self.__lvps_env.report_target_found (agent_id = self.__agent_id, x=est_x, y=est_y)
         return False
-
-
-    #def notify_event (self, event_type):
-    #    if event_type == 'found':
-    #        logging.getLogger(__name__).info(f"System notified agent {self.__agent_id} the search is over")
-    #        self.__is_target_found = True
-    #    else:
-    #        logging.getLogger(__name__).info(f"event {event_type}")
-
 
     def look(self):
         # if we are within distance of the search target and it's not in a blind spot, or obscured, find it (random chance)
-        logging.getLogger(__name__).info(f"Agent {self.__agent_id} Looking (facing {self.__lvps_heading})")
+        logging.getLogger(__name__).debug(f"Agent {self.__agent_id} Looking (facing {self.__lvps_heading})")
         self.__look_history.insert(0, (self.__lvps_x, self.__lvps_y, self.__lvps_heading, self.__relative_search_begin, self.__relative_search_end, self.get_sight_distance()))
         self.__update_agent_rendering()
 
@@ -322,12 +328,12 @@ class SimulatedAgent:
         # if a target is visible, this was a success
         success = lvps_target_x is not None and lvps_target_y is not None
         if success:
-            logging.getLogger(__name__).info("Found a Target visually!")
+            logging.getLogger(__name__).info(f"Agent {self.__agent_id} Found a Target visually!")
 
         return success and self.__does_event_happen(AgentActions.SuccessRate[AgentActions.Look])
     
     def do_nothing (self):
-        logging.getLogger(__name__).info("Doing nothing")
+        logging.getLogger(__name__).debug("Doing nothing")
         return True
        
     # returns true if a "random" event should occur, based on the given occurance rate
@@ -346,7 +352,7 @@ class SimulatedAgent:
         closest = None
         closest_heading = None
 
-        logging.getLogger(__name__).info(f"Checking for visible targets within sim dist: {self.get_sight_distance()}")
+        logging.getLogger(__name__).debug(f"Checking for visible targets within sim dist: {self.get_sight_distance()}")
         vis_targets, vis_headings = self.__lvps_env.get_visible_targets(self.__agent_id, self.get_sight_distance())
         for i,t in enumerate(vis_targets):
             dist = self.__get_distance(self.__lvps_x, self.__lvps_y, t['x'], t['y'])

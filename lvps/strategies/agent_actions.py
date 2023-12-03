@@ -1,38 +1,39 @@
 from position.confidence import Confidence
 
 class AgentActions:
-    Go = 0
-    Rotate = 2
-    GoRandom = 7
-    GoToSafePlace = 8
-    Heading = 9 # this isn't really an action the vehicle can do, but we need a config for how accurate it should be
-    GoForward = 10
-    GoReverse = 11
-    Strafe = 12
-    AdjustRandomly = 13
+    NumTrainableActions = 17
 
-
-    # these are trainable actions
-    Look = 1
-    Photograph = 3
-    EstimatePosition = 4
-    Nothing = 5
-    ReportFound = 6
+    # these are trainable actions. They need to be a sequence starting with zero for gym environment to use them
+    Look = 0
+    Photograph = 1
+    EstimatePosition = 2
+    Nothing = 3
+    ReportFound = 4
 
     # these are trainable actions that compose the other actions
     # above. their accuracy is determined by the methods they utilize
-    GoForwardShort = 20
-    GoForwardMedium = 21
-    GoForwardFar = 22
-    GoReverseShort = 23
-    GoReverseMedium = 24
-    GoReverseFar = 25
-    RotateLeftSmall = 26
-    RotateLeftMedium = 27
-    RotateLeftBig = 28
-    RotateRightSmall = 26
-    RotateRightMedium = 27
-    RotateRightBig = 28
+    GoForwardShort = 5
+    GoForwardMedium = 6
+    GoForwardFar = 7
+    GoReverseShort = 8
+    GoReverseMedium = 9
+    GoReverseFar = 10
+    RotateLeftSmall = 11
+    RotateLeftMedium = 12
+    RotateLeftBig = 13
+    RotateRightSmall = 14
+    RotateRightMedium = 15
+    RotateRightBig = 16
+
+    Go = 17
+    Rotate = 18
+    GoRandom = 19
+    GoToSafePlace = 20
+    Heading = 21 # this isn't really an action the vehicle can do, but we need a config for how accurate it should be
+    GoForward = 22
+    GoReverse = 23
+    Strafe = 24
+    AdjustRandomly = 25
 
     #GoFullDistance = 10 # this isn't really an action the vehicle can do, but we need a config for how likely vehicle is to stop short
 

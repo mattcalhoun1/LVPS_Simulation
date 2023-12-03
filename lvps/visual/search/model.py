@@ -9,8 +9,8 @@ from field.field_renderer import FieldRenderer
 from lvps.simulation.simulated_agent import SimulatedAgent
 from lvps.simulation.sim_events import SimEventType
 from lvps.simulation.agent_types import AgentTypes
-from .reasonable_search_strategy import ReasonableSearchStrategy
-from .random_search_strategy import RandomSearchStrategy
+from ...strategies.reasonable_search_strategy import ReasonableSearchStrategy
+from ...strategies.random_search_strategy import RandomSearchStrategy
 
 import numpy as np
 
@@ -159,7 +159,7 @@ class AutonomousSearch(mesa.Model):
 
             sim_x, sim_y = self.__field_scaler.get_scaled_coords(lvps_x=lvps_x, lvps_y=lvps_y)
             visual_agent = self.__search_agents[agent_id]
-            logging.getLogger(__name__).info(f"handle_event moving agent {agent_id} to sim position: {round(sim_x)},{round(sim_y)}")
+            logging.getLogger(__name__).debug(f"handle_event moving agent {agent_id} to sim position: {round(sim_x)},{round(sim_y)}")
             
             # if it's out of the image, move to the edge
             if sim_x < 0:
@@ -184,7 +184,7 @@ class AutonomousSearch(mesa.Model):
 
     def __get_agent_strategy (self):
         #return RandomSearchStrategy()
-        return ReasonableSearchStrategy()
+        return ReasonableSearchStrategy(render_field=False)
 
     def step(self):
         if len(self.__found_targets) < self.num_targets:

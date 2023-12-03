@@ -5,8 +5,8 @@ import logging
 #from .field_guide import FieldGuide
 import numpy as np
 from lvps.simulation.simulated_agent import SimulatedAgent
-from lvps.simulation.agent_strategy import AgentStrategy
-from lvps.simulation.agent_actions import AgentActions
+from lvps.strategies.agent_strategy import AgentStrategy
+from lvps.strategies.agent_actions import AgentActions
 
 from field.field_renderer import FieldRenderer
 from field.field_scaler import FieldScaler
@@ -23,16 +23,9 @@ class SearchAgent(mesa.Agent):
 
         self.__step_count = 0
 
-        self.__moore = True # can see in diagonal directions, not just up/down/left/right
-
         self.__curr_action = AgentActions.Nothing
         self.__curr_action_start_time = 0
         self.__curr_action_result = True
-
-        self.__look_history_size = 10 # remember this many past looks
-        self.__look_history = [] # where it has already looked
-
-        self.__position_history = []
 
         self.__agent_strategy = agent_strategy
         self.__is_target_found = False
@@ -100,7 +93,7 @@ class SearchAgent(mesa.Agent):
         if chosen_x is not None:
             action_params['x'] = chosen_x
             action_params['y'] = chosen_y
-            logging.getLogger(__name__).info(f"Random traveling from coords: {lvps_x},{lvps_y} to {chosen_x},{chosen_y}")
+            logging.getLogger(__name__).debug(f"Random traveling from coords: {lvps_x},{lvps_y} to {chosen_x},{chosen_y}")
             return self.__lvps_sim_agent.go(action_params=action_params)
        
         return False
@@ -166,7 +159,7 @@ class SearchAgent(mesa.Agent):
         return self.__lvps_sim_agent.photograph()
 
     def report_found(self, action_params):
-        return self.__lvps_sim_agent.report_found(action_params=action_params)
+        return self.__lvps_sim_agent.report_found()
 
 
     def notify_event (self, event_type):
@@ -218,7 +211,8 @@ class SearchAgent(mesa.Agent):
         
         # check if current operation takes more steps
         if AgentActions.StepCost[self.__curr_action] > self.__step_count - self.__curr_action_start_time:
-            logging.getLogger(__name__).info("Action takes more time, waiting")
+            #logging.getLogger(__name__).info("Action takes more time, waiting")
+            pass
         else:
             next_action, next_config = self.__agent_strategy.get_next_action(self.__lvps_sim_agent, self.__curr_action, self.__curr_action_result, self.__step_count)
 
@@ -227,10 +221,6 @@ class SearchAgent(mesa.Agent):
             self.__curr_action_start_time = self.__step_count
             self.__curr_action_result = action_map[next_action](next_config)
 
-    # returns true if a "random" event should occur, based on the given occurance rate
-    def __does_event_happen (self, occurance_rate):
-        return random.randrange(0,100) <= occurance_rate * 100
-    
     def __get_distance(self, x1, y1, x2, y2):
         dx = x1 - x2
         dy = y1 - y2
