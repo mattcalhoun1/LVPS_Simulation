@@ -1,16 +1,16 @@
 from lvps.strategies.agent_actions import AgentActions
 
 class RewardAmounts:
-    StepCostMultiplier = 1 # to scale costs down , if desired
+    StepCostMultiplier = 0.0 # to scale costs down , if desired
 
-    OutOfBounds = -100
-    Collision = -100
-    InObstacle = -100
+    OutOfBounds = -.1
+    Collision = -.1
+    InObstacle = -.1
 
-    FalseReport = -10
+    FalseReport = -.1
 
-    SuccessfulLook = 2
-    SuccessfulPhotograph = 5
+    SuccessfulLook = 10
+    SuccessfulPhotograph = 50
 
     SomeAgentFoundTarget = 500
     ThisAgentFoundTarget = 500

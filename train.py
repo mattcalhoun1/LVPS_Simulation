@@ -21,7 +21,7 @@ register(
 class Train:
     def __init__(self, model_dir):
         self.__model_dir = model_dir
-        self.__max_episode_steps = 3000 # max steps per episode
+        self.__max_episode_steps = 10000 # max steps per episode
 
         # create new instances of the environment
         self.__create_environments('lvps/Search-v0')
@@ -47,7 +47,7 @@ class Train:
             learning_starts = 0, # original 0
 
             gamma = 0.98, # original 0.98
-            target_update_interval = 10, # original 600
+            target_update_interval = 600, # original 600
             train_freq = 16, # original 16
             gradient_steps = 8, # original 8
 

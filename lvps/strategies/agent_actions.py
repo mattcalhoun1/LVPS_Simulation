@@ -107,3 +107,33 @@ class AgentActions:
         RotateRightMedium : 1,
         RotateRightBig : 1
     }
+
+    Names = {
+        Look : "Look",
+        Photograph : "Photograph",
+        EstimatePosition : "EstimatePosition",
+        Nothing : "Nothing",
+        ReportFound : "ReportFound",
+        GoForwardShort : "GoForwardShort",
+        GoForwardMedium : "GoForwardMedium",
+        GoForwardFar : "GoForwardFar",
+        GoReverseShort : "GoReverseShort",
+        GoReverseMedium : "GoReverseMedium",
+        GoReverseFar : "GoReverseFar",
+        RotateLeftSmall : "RotateLeftSmall",
+        RotateLeftMedium : "RotateLeftMedium",
+        RotateLeftBig : "RotateLeftBig",
+        RotateRightSmall : "RotateRightSmall",
+        RotateRightMedium : "RotateRightMedium",
+        RotateRightBig : "RotateRightBig",
+
+        Go : "Go",
+        Rotate : "Rotate",
+        GoRandom : "GoRandom",
+        GoToSafePlace : "GoToSafePlace",
+        Heading : "Heading",
+        GoForward : "GoForward",
+        GoReverse : "GoReverse",
+        Strafe : "Strafe",
+        AdjustRandomly : "AdjustRandomly"
+    }
