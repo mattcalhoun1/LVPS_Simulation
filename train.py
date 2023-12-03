@@ -4,6 +4,7 @@ from stable_baselines3.common.env_checker import check_env
 from stable_baselines3 import DQN
 from stable_baselines3.common.callbacks import EvalCallback
 from gymnasium.wrappers.time_limit import TimeLimit
+from gymnasium.wrappers.autoreset import AutoResetWrapper
 from stable_baselines3.common.env_util import make_vec_env
 from lvps.gym.rbean_utils import evaluate, SB3Agent
 import warnings
@@ -21,8 +22,8 @@ register(
 class Train:
     def __init__(self, model_dir):
         self.__model_dir = model_dir
-        self.__max_episode_steps = 10000 # max steps per episode
-        self.__max_total_steps = 1_000_000
+        self.__max_episode_steps = 500_000 # max steps per episode
+        self.__max_total_steps = 500_000
 
         # create new instances of the environment
         self.__create_environments('lvps/Search-v0')
@@ -32,7 +33,7 @@ class Train:
         self.__eval_callback = None
 
     def __create_environments (self, env_id):
-        self.__base_env = TimeLimit(gymnasium.make(env_id), self.__max_episode_steps)
+        self.__base_env = AutoResetWrapper(TimeLimit(gymnasium.make(env_id), self.__max_episode_steps))
         #self.__base_envs = make_vec_env(env_id=env_id, n_envs=env_count, seed=0)
         #self.__eval_envs = make_vec_env(env_id=env_id, n_envs=env_count, seed=0)
         self.__test_env = gymnasium.make(env_id, render_mode='console')        
@@ -49,8 +50,8 @@ class Train:
 
             gamma = 0.98, # original 0.98
             target_update_interval = 600, # original 600
-            train_freq = 16, # original 16
-            gradient_steps = 8, # original 8
+            #train_freq = 16, # original 16
+            #gradient_steps = 8, # original 8
 
             exploration_fraction = 0.2, # original 0.2
             exploration_initial_eps = 1.0, # original 1.0
