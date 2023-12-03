@@ -102,7 +102,7 @@ class LvpsSimEnvironment:
             is_blocked, obstacle_id = self.__map.is_path_blocked(starting_x, starting_y, next_x, next_y, agent['agent'].get_path_width())
             if is_blocked:
                 # put in the center of the obstacle
-                logging.getLogger(__name__).info(f"Agent {agent_id} ran into obstacle {obstacle_id}")
+                logging.getLogger(__name__).debug(f"Agent {agent_id} ran into obstacle {obstacle_id}")
                 o_xmin, o_ymin, o_xmax, o_ymax = self.__map.get_obstacle_bounds(obstacle_id)
                 self.__agents[agent_id]['x'] = o_xmin + .5 * (o_xmax - o_xmin)
                 self.__agents[agent_id]['y'] = o_ymin + .5 * (o_ymax - o_ymin)
