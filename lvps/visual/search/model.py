@@ -30,6 +30,8 @@ class AutonomousSearch(mesa.Model):
         self.__lvps_env = None
         self.__next_agent_id = 0
 
+        logging.getLogger(__name__).info(f"AutonomousSearch mesa model height: {height}, width: {width}")
+
         self.__found_targets = []
 
         self.schedule = mesa.time.RandomActivationByType(self)
@@ -88,6 +90,9 @@ class AutonomousSearch(mesa.Model):
             x,y = self.get_field_sim_scaler().get_scaled_coords(lvps_x=lvps_x, lvps_y=lvps_y)
             x = round(x)
             y = round(y)
+
+            logging.getLogger(__name__).info(f"Search Agent: LVPS ({lvps_x},{lvps_y}), Scaled ({x},{y})")
+
             sa = SearchAgent(
                 self.__get_unique_id(),
                 (x, y),
@@ -107,6 +112,9 @@ class AutonomousSearch(mesa.Model):
             x,y = self.get_field_sim_scaler().get_scaled_coords(lvps_x=lvps_x, lvps_y=lvps_y)
             x = round(x)
             y = round(y)
+
+            logging.getLogger(__name__).info(f"Traversable: LVPS ({lvps_x},{lvps_y}), Scaled ({x},{y})")
+
             agent_id = self.__get_unique_id()
             target_agent = Target(agent_id, (x,y), self)
             self.grid.place_agent(target_agent, (x, y))
@@ -127,7 +135,12 @@ class AutonomousSearch(mesa.Model):
 
     def get_field_sim_scaler (self):
         if self.__field_scaler is None:
-            self.__field_scaler = FieldScaler(field_map=self.get_lvps_environment().get_map(), scaled_height=self.height, scaled_width=self.width, scale_factor=0.33)
+            self.__field_scaler = FieldScaler(
+                field_map=self.get_lvps_environment().get_map(), 
+                scaled_height=self.height - 1, 
+                scaled_width=self.width - 1, 
+                scale_factor=1
+            )
         
         return self.__field_scaler
     

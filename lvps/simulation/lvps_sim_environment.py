@@ -3,6 +3,7 @@ import math
 import numpy as np
 import random
 from lvps.generators.static_field_map_generator import StaticFieldMapGenerator
+from lvps.generators.random_field_map_generator import RandomFieldMapGenerator
 from field.field_scaler import FieldScaler
 from trig.trig import BasicTrigCalc
 from position.confidence import Confidence
@@ -318,7 +319,23 @@ class LvpsSimEnvironment:
 
     def get_map (self):
         if self.__map is None:
-            self.__map = StaticFieldMapGenerator().generate_map()
+            #self.__map = StaticFieldMapGenerator().generate_map()
+            self.__map = RandomFieldMapGenerator(
+                min_width=150,
+                max_width=500,
+                min_height=150,
+                max_height=500,
+                min_obstacles=3,
+                max_obstacles=10,
+                min_obstacle_size_pct=0.01,
+                max_obstacle_size_pct=0.25,
+                min_deadspots=2,
+                max_deadspots=10,
+                min_deadspot_size_pct = 0.01,
+                max_deadspot_size_pct=0.05
+            ).generate_map()
+
+            logging.getLogger(__name__).info(f"Random LVPS Map Height: {self.__map.get_length()}, Width: {self.__map.get_width()}, Boundaries: {self.__map.get_boundaries()}")
         return self.__map
 
     # tells whether the given target is already found
