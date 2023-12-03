@@ -17,7 +17,7 @@ class LvpsSimEnvironment:
         self.__agents = {}
 
         self.__target_find_position_threshold = 0.07 # 'found' position has to be within this distance in order to be considered found
-        self.__agent_collision_threshold = 0.1 # can't be this percent close to any other agent
+        self.__agent_collision_threshold = 0.05 # can't be this percent close to any other agent
         self.__map = None
         self.__image_scaler = None
 
@@ -208,9 +208,10 @@ class LvpsSimEnvironment:
     def is_too_close_to_other_agents (self, agent_id):
         # calculate distance from each other agent
         closest_id, closest_dist = self.__find_closest_agent (agent_id)
-        if closest_dist <= min(self.get_map().get_width(), self.get_map().get_length()) * self.__agent_collision_threshold:
-            logging.getLogger(__name__).info(f"Agent {agent_id} may have collided with {closest_id}!")
-            return True
+        if closest_id is not None: # might be the only agent on the field
+            if closest_dist <= min(self.get_map().get_width(), self.get_map().get_length()) * self.__agent_collision_threshold:
+                logging.getLogger(__name__).info(f"Agent {agent_id} may have collided with {closest_id}!")
+                return True
         return False
 
 

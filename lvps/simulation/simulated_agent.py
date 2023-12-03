@@ -237,8 +237,14 @@ class SimulatedAgent:
     def get_far_distance (self):
         return min(self.__lvps_env.get_map().get_width(),self.__lvps_env.get_map().get_length()) * self.__far_distance_pct
         
+    def __has_recent_position (self):
+        return self.__lvps_x is not None and self.__lvps_y is not None
 
     def go (self, action_params):
+
+        if not self.__has_recent_position():
+            return False
+
         logging.getLogger(__name__).debug(f"Going toward {action_params['x']},{action_params['y']}")
 
         target_x = action_params['x']
@@ -284,6 +290,9 @@ class SimulatedAgent:
 
 
     def photograph(self):
+        if not self.__has_recent_position():
+            return False
+
         logging.getLogger(__name__).info(f"Agent {self.__agent_id} photographing")
 
         lvps_target_x, lvps_target_y, lvps_target_heading = self.get_nearest_photographable_target_position()
@@ -299,6 +308,9 @@ class SimulatedAgent:
         return success
 
     def report_found(self):
+        if not self.__has_recent_position():
+            return False
+
         # this is sort of cheating, as we are using the known coords in this case. In reality, we would be estimated the 
         # position, not calculating it.
         lvps_target_x, lvps_target_y, lvps_target_heading = self.get_nearest_photographable_target_position()
@@ -318,6 +330,9 @@ class SimulatedAgent:
         return False
 
     def look(self):
+        if not self.__has_recent_position():
+            return False
+
         # if we are within distance of the search target and it's not in a blind spot, or obscured, find it (random chance)
         logging.getLogger(__name__).debug(f"Agent {self.__agent_id} Looking (facing {self.__lvps_heading})")
         self.__look_history.insert(0, (self.__lvps_x, self.__lvps_y, self.__lvps_heading, self.__relative_search_begin, self.__relative_search_end, self.get_sight_distance()))

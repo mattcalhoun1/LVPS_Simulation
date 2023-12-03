@@ -22,6 +22,7 @@ class LvpsGymEnv(gym.Env):
 
         self.__scaled_map_height = 400
         self.__scaled_map_width = 400
+        self.__channels = 3
 
         self.__observation_image_height_inches = 4
         self.__observation_image_width_inches = 4
@@ -32,7 +33,7 @@ class LvpsGymEnv(gym.Env):
 
         # observation space is field rendered images as np arrays
         self.observation_space = spaces.Box(low=0, high=255,
-                                            shape=(3, self.__scaled_map_height, self.__scaled_map_width), dtype=np.uint8)
+                                            shape=(self.__scaled_map_height, self.__scaled_map_width, self.__channels), dtype=np.uint8)
 
         self.__training_agent = None
         self.__lvps_env = None
@@ -93,8 +94,8 @@ class LvpsGymEnv(gym.Env):
         reward = LvpsGymRewards(self.__training_agent).calculate_reward(
             action_performed=action,
             action_result=action_result,
-            target_found=len(complete_step_targets_found) > len(beginning_targets_found),
-            target_found_by_this_agent=len(agent_step_targets_found) > len(beginning_targets_found),
+            target_found=complete_step_targets_found > beginning_targets_found,
+            target_found_by_this_agent=agent_step_targets_found > beginning_targets_found,
             all_targets_found=len(self.__found_targets) == self.__num_targets
         )
 
@@ -235,12 +236,14 @@ class LvpsGymEnv(gym.Env):
 
         # add the agent in training
         self.__training_agent = self.__create_and_add_single_agent(field_renderer=field_renderer)
+        logging.getLogger(__name__).info("Added training agent.")
 
         # add the drone agents and their strategies
         for i in range(self.__num_drone_agents):
             drone = self.__create_and_add_single_agent(field_renderer=field_renderer)
             self.__drone_agents.append(drone)
             self.__drone_strategies[drone.get_id()] = ReasonableSearchStrategy(render_field=False)
+            logging.getLogger(__name__).info("Added drone agent.")
 
     def __add_targets (self):
         # create targets
@@ -261,8 +264,7 @@ class LvpsGymEnv(gym.Env):
             lvps_x = event_details['x']
             lvps_y = event_details['y']
             heading = event_details['heading']
-            logging.getLogger(__name__).info(f"Gym Env notified agent {agent_id} moved to position: {round(lvps_x)},{round(lvps_y)}, heading: {heading}")
-            
+            logging.getLogger(__name__).debug(f"Gym Env notified agent {agent_id} moved to position: {round(lvps_x)},{round(lvps_y)}, heading: {heading}")
         elif event_type == SimEventType.TargetFound:
             target_id = event_details['target_id']
             if target_id not in self.__found_targets:
