@@ -34,17 +34,25 @@ class LvpsGymEnv(gym.Env):
         self.observation_space = spaces.Box(low=0, high=255,
                                             shape=(3, self.__scaled_map_height, self.__scaled_map_width), dtype=np.uint8)
 
-        self.__num_drone_agents = 0
-        self.__drone_agents = []
-        self.__drone_strategies = {}
         self.__training_agent = None
         self.__lvps_env = None
         self.__found_targets = []
         self.__next_agent_id = 0
 
+        # drone agent state
+        self.__num_drone_agents = 0
+        self.__drone_agents = []
+        self.__drone_strategies = {}
+
+        # These are required for the hardcoded strategies
+        self.__drone_last_action = {}
+        self.__drone_last_result = {}
+
         self.__num_targets = 2
+        self.__lvps_sim_step = 0
 
     def step(self, action):
+        self.__lvps_sim_step += 1
         beginning_targets_found = len(self.__found_targets)
 
         # the 
@@ -57,8 +65,29 @@ class LvpsGymEnv(gym.Env):
         # each other agent performs a step, according to their strategy
         for d in self.__drone_agents:
             # get a strategy for the action
+            agent_strategy = self.__drone_strategies[d.get_id()]
+            drone_last_action = None if d.get_id() not in self.__drone_last_action else self.__drone_last_action[d.get_id()]
+            drone_last_result = None if d.get_id() not in self.__drone_last_result else self.__drone_last_result[d.get_id()]
 
-            pass
+            next_drone_action, next_drone_params = agent_strategy.get_next_action (
+                lvps_agent = d,
+                last_action = drone_last_action,
+                last_action_result = drone_last_result,
+                step_count=self.__lvps_sim_step)
+            
+            drone_method, next_drone_params = self.__get_drone_action_method_and_params (
+                drone=d,
+                action_num = next_drone_action,
+                action_params=next_drone_params
+            )
+            drone_result = None
+            if next_drone_params is not None:
+                drone_result = drone_method(next_drone_params)
+            else:
+                drone_result = drone_method()
+            self.__drone_last_action[d.get_id()] = next_drone_action
+            self.__drone_last_result[d.get_id()] = drone_result
+
         complete_step_targets_found = len(self.__found_targets)
 
         reward = LvpsGymRewards(self.__training_agent).calculate_reward(
@@ -76,7 +105,7 @@ class LvpsGymEnv(gym.Env):
         return self.__get_agent_observation(self.__training_agent), reward, terminated, truncated, info
 
 
-    def __get_action_method (self, agent, action_num):
+    def __get_action_method (self, agent : SimulatedAgent, action_num):
         action_map = {
             AgentActions.EstimatePosition : agent.estimate_position,
             AgentActions.Look : agent.look,
@@ -99,6 +128,48 @@ class LvpsGymEnv(gym.Env):
 
         return action_map[action_num]
 
+    # drone has an extended set of actions
+    def __get_drone_action_method_and_params (self, drone : SimulatedAgent, action_num, action_params):
+        action_map = {
+            AgentActions.EstimatePosition : drone.estimate_position,
+            AgentActions.Look : drone.look,
+            AgentActions.Photograph : drone.photograph,
+            AgentActions.Nothing : drone.do_nothing,
+            AgentActions.ReportFound : drone.report_found,
+            AgentActions.GoForwardShort : drone.go_forward_short,
+            AgentActions.GoForwardMedium : drone.go_forward_medium,
+            AgentActions.GoForwardFar : drone.go_forward_far,
+            AgentActions.GoReverseShort : drone.go_reverse_short,
+            AgentActions.GoReverseMedium : drone.go_reverse_medium,
+            AgentActions.GoReverseFar : drone.go_reverse_far,
+            AgentActions.RotateLeftSmall : drone.rotate_left_small,
+            AgentActions.RotateLeftMedium : drone.rotate_left_medium,
+            AgentActions.RotateLeftBig : drone.rotate_left_big,
+            AgentActions.RotateRightSmall : drone.rotate_right_small,
+            AgentActions.RotateRightMedium : drone.rotate_right_medium,
+            AgentActions.RotateRightBig : drone.rotate_right_big,
+            AgentActions.Go : drone.go,
+            AgentActions.Rotate : drone.rotate,
+            AgentActions.GoForward : drone.go_forward,
+            AgentActions.GoReverse : drone.go_reverse,
+            AgentActions.AdjustRandomly : drone.adjust_randomly
+
+        }
+
+        actions_with_params = [
+            AgentActions.Go,
+            AgentActions.Rotate,
+            AgentActions.GoForward,
+            AgentActions.GoReverse,
+            AgentActions.Strafe,
+        ]
+        filtered_action_params = None
+        if action_num in actions_with_params:
+            filtered_action_params = action_params
+
+        return action_map[action_num], filtered_action_params
+
+
 
     def reset(self, seed=None, options=None):
         # create a new LVPS simulation
@@ -106,8 +177,12 @@ class LvpsGymEnv(gym.Env):
         self.__found_targets = []
         self.__drone_agents = []
         self.__drone_strategies = {}
+        self.__drone_last_action = {}
+        self.__drone_last_result = {}
+
         self.__training_agent = None
         self.__next_agent_id = 0
+        self.__lvps_sim_step = 0
 
         # add all agents
         self.__add_agents()

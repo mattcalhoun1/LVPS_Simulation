@@ -45,58 +45,7 @@ class SearchAgent(mesa.Agent):
         return any(isinstance(agent, SearchAgent) for agent in this_cell)
 
     def adjust_randomly (self, action_params):
-        return self.__lvps_sim_agent.adjust_randomly(action_params)
-
-    def go_random (self, action_params):
-        logging.getLogger(__name__).info(f"Going in random direction")
-        # find neighboring coords that are open and not in our recent history
-        chosen_coords = None
-        max_attempts = 10
-        attempts = 0
-        min_travel_dist = 5.0 # dont bother moving if it's less than this
-
-        lvps_x, lvps_y, lvps_heading, lvps_confidence = self.__lvps_sim_agent.get_last_coords_and_heading()
-        chosen_x = None
-        chosen_y = None
-
-        while (chosen_x is None and attempts < max_attempts):
-            attempts += 1
-            # travel the sight distance
-            desired_slope = np.random.choice([-4, -2, -1, -1.5, -.5, 0, .5, 1, 1.5, 2, 4])
-            desired_direction = np.random.choice([-1, 1]) # x go left or right
-
-            x_travel = desired_direction * self.__lvps_sim_agent.get_sight_distance()
-            far_x = lvps_x + x_travel
-            far_y = lvps_y + x_travel * desired_slope
-            closer_x, closer_y = self.__scaler.get_nearest_travelable_lvps_coords (lvps_x, lvps_y, far_x, far_y, self.__lvps_sim_agent.get_sight_distance())
-
-            # must be at least some distance from any of our past few moves
-            backtracking = False
-            look_history = self.__lvps_sim_agent.get_look_history()
-            if len(look_history) > 1:
-                recent_history = look_history[len(look_history) - 2] # next to last. We probably alraedy looked from current coord
-                recent_x = recent_history[0]
-                recent_y = recent_history[1] 
-                if self.__get_distance(closer_x, closer_y, recent_x, recent_y) < self.__get_distance(lvps_x, lvps_y, recent_x, recent_y):
-                    backtracking = True
-
-            # if we are not backtracking, or we're running out of directions to go            
-            if backtracking == False or attempts >= (max_attempts - 1):
-                if self.__get_distance(lvps_x, lvps_y, closer_x, closer_y) >= min_travel_dist:
-                    chosen_x = closer_x
-                    chosen_y = closer_y
-                #else:
-                #    logging.getLogger(__name__).info(f"Distance from {lvps_x},{lvps_y} to {closer_x},{closer_y} is not far enough")
-                #    #    final_x, final_y = self.__scaler.get_nearest_travelable_sim_coords (sim_x, sim_y, target_sim_x, target_sim_y, self.get_max_sim_travel_distance())
-                #    #    chosen_coords = (round(final_x), round(final_y))
-        
-        if chosen_x is not None:
-            action_params['x'] = chosen_x
-            action_params['y'] = chosen_y
-            logging.getLogger(__name__).debug(f"Random traveling from coords: {lvps_x},{lvps_y} to {chosen_x},{chosen_y}")
-            return self.__lvps_sim_agent.go(action_params=action_params)
-       
-        return False
+        return self.__lvps_sim_agent.adjust_randomly()
 
     def go (self, action_params):
         return self.__lvps_sim_agent.go(action_params=action_params)
@@ -146,12 +95,6 @@ class SearchAgent(mesa.Agent):
     def adjust_randomly (self, action_params):
         return self.__lvps_sim_agent.adjust_randomly(action_params=action_params)
 
-    def go_to_safe_place (self, action_params):
-        safe_x, safe_y = self.__scaler.get_random_traversable_coords()
-        action_params['x'] = safe_x
-        action_params['y'] = safe_y
-        return self.go(action_params=action_params)
-
     def rotate(self, action_params):
         return self.__lvps_sim_agent.rotate(action_params=action_params)
 
@@ -188,10 +131,8 @@ class SearchAgent(mesa.Agent):
             AgentActions.Look : self.look,
             AgentActions.Rotate : self.rotate,
             AgentActions.Photograph : self.photograph,
-            AgentActions.GoRandom : self.go_random,
             AgentActions.Nothing : self.do_nothing,
             AgentActions.ReportFound : self.report_found,
-            AgentActions.GoToSafePlace : self.go_to_safe_place,
             AgentActions.GoForward : self.go_forward,
             AgentActions.GoReverse : self.go_reverse,
             AgentActions.AdjustRandomly : self.adjust_randomly,

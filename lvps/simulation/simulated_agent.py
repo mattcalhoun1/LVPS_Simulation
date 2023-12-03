@@ -154,7 +154,7 @@ class SimulatedAgent:
 
         return success
 
-    def adjust_randomly (self, action_params):
+    def adjust_randomly (self):
         logging.getLogger(__name__).debug(f"Agent {self.__agent_id} Adjusting randomly")
         success = True
 
