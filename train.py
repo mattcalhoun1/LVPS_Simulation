@@ -22,7 +22,7 @@ class Train:
     def __init__(self, model_dir):
         self.__model_dir = model_dir
         self.__max_episode_steps = 10000 # max steps per episode
-        self.__max_episodes = 20_000
+        self.__max_total_steps = 1_000_000
 
         # create new instances of the environment
         self.__create_environments('lvps/Search-v0')
@@ -56,7 +56,7 @@ class Train:
             exploration_initial_eps = 1.0, # original 1.0
             exploration_final_eps = 0.07, # original 0.07
 
-            #policy_kwargs = dict(net_arch=[256,128,64]),
+            policy_kwargs = dict(net_arch=[256,128,64]),
             verbose=1,
             seed=1
         )
@@ -68,14 +68,14 @@ class Train:
         model = self.__create_empty_model(self.__base_env)
         self.__recreate_eval_callback(self.__base_env)
 
-        model = model.learn(total_timesteps=self.__max_episode_steps * self.__max_episodes, callback=self.__eval_callback, log_interval=1, progress_bar=True)
+        model = model.learn(total_timesteps=self.__max_total_steps, callback=self.__eval_callback, log_interval=1, progress_bar=True)
 
     def test (self):
         logging.getLogger(__name__).info ("Testing agent...")
         best_model = DQN.load(f'{self.__model_dir}/evaluation/best_model.zip', env=self.__test_env)
         sb3_agent = SB3Agent(best_model)
 
-        _ = evaluate(self.__test_env, sb3_agent, gamma=1.0, episodes=50, max_steps=200, seed=1)
+        _ = evaluate(self.__test_env, sb3_agent, gamma=1.0, episodes=2, max_steps=2000, seed=1)
 
     def __recreate_eval_callback(self, environment):
         self.__eval_callback = EvalCallback(
