@@ -22,6 +22,7 @@ class Train:
     def __init__(self, model_dir):
         self.__model_dir = model_dir
         self.__max_episode_steps = 10000 # max steps per episode
+        self.__max_episodes = 20_000
 
         # create new instances of the environment
         self.__create_environments('lvps/Search-v0')
@@ -67,7 +68,7 @@ class Train:
         model = self.__create_empty_model(self.__base_env)
         self.__recreate_eval_callback(self.__base_env)
 
-        model = model.learn(total_timesteps=200_000, callback=self.__eval_callback)
+        model = model.learn(total_timesteps=self.__max_episode_steps * self.__max_episodes, callback=self.__eval_callback, log_interval=1, progress_bar=True)
 
     def test (self):
         logging.getLogger(__name__).info ("Testing agent...")
