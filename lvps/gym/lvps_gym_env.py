@@ -103,7 +103,8 @@ class LvpsGymEnv(gym.Env):
         truncated = False
         info = {}
 
-        logging.getLogger(__name__).info(f"Action: {AgentActions.Names[action]}, Result: {action_result}, Reward: {reward}")
+        if reward > 0:
+            logging.getLogger(__name__).info(f"Action: {AgentActions.Names[action]}, Result: {action_result}, Reward: {reward}")
 
         return self.__get_agent_observation(self.__training_agent), reward, terminated, truncated, info
 
