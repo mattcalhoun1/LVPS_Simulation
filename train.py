@@ -23,7 +23,7 @@ class Train:
     def __init__(self, model_dir):
         self.__model_dir = model_dir
         self.__max_episode_steps = 1000 # max steps per episode
-        self.__max_total_steps = 500_000
+        self.__max_total_steps = 1_000_000
 
         # create new instances of the environment
         self.__create_environments('lvps/Search-v0')
@@ -44,7 +44,7 @@ class Train:
             learning_rate = 4e-3, # original 4e-3
 
             batch_size = 128, # original 128
-            buffer_size = 10_000, # original 10k
+            buffer_size = 4_000, # original 10k
             learning_starts = 0, # original 0
 
             gamma = 0.98, # original 0.98

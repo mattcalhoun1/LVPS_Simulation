@@ -57,8 +57,8 @@ class LvpsGymEnv(gym.Env):
         self.__lvps_sim_step += 1
         beginning_targets_found = len(self.__found_targets)
 
-        # the 
         #This agent goes
+        self.__training_agent.estimate_position()
         action_method = self.__get_action_method(self.__training_agent, action)
         action_result = action_method()
         agent_step_targets_found = len(self.__found_targets)

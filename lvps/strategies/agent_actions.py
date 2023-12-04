@@ -1,30 +1,30 @@
 from position.confidence import Confidence
 
 class AgentActions:
-    NumTrainableActions = 17
+    NumTrainableActions = 16
 
     # these are trainable actions. They need to be a sequence starting with zero for gym environment to use them
     Look = 0
     Photograph = 1
-    EstimatePosition = 2
-    Nothing = 3
-    ReportFound = 4
+    Nothing = 2
+    ReportFound = 3
 
     # these are trainable actions that compose the other actions
     # above. their accuracy is determined by the methods they utilize
-    GoForwardShort = 5
-    GoForwardMedium = 6
-    GoForwardFar = 7
-    GoReverseShort = 8
-    GoReverseMedium = 9
-    GoReverseFar = 10
-    RotateLeftSmall = 11
-    RotateLeftMedium = 12
-    RotateLeftBig = 13
-    RotateRightSmall = 14
-    RotateRightMedium = 15
-    RotateRightBig = 16
+    GoForwardShort = 4
+    GoForwardMedium = 5
+    GoForwardFar = 6
+    GoReverseShort = 7
+    GoReverseMedium = 8
+    GoReverseFar = 9
+    RotateLeftSmall = 10
+    RotateLeftMedium = 11
+    RotateLeftBig = 12
+    RotateRightSmall = 13
+    RotateRightMedium = 14
+    RotateRightBig = 15
 
+    EstimatePosition = 16
     Go = 17
     Rotate = 18
     GoRandom = 19
