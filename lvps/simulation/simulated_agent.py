@@ -406,7 +406,7 @@ class SimulatedAgent:
         logging.getLogger(__name__).debug(f"Checking for visible unfound targets within sim dist: {self.get_sight_distance()}")
         vis_targets, vis_headings = self.__lvps_env.get_visible_targets(self.__agent_id, self.get_sight_distance())
         for i,t in enumerate(vis_targets):
-            if self.__lvps_env.is_target_found(self.__agent_id, t['x'], t['y']):
+            if self.__lvps_env.is_target_found(self.__agent_id, t['x'], t['y']) == False:
                 dist = self.__get_distance(self.__lvps_x, self.__lvps_y, t['x'], t['y'])
                 if min_dist is None or dist < min_dist:
                     closest = t
