@@ -36,6 +36,7 @@ class LvpsGymEnv(gym.Env):
                                             shape=(self.__scaled_map_height, self.__scaled_map_width, self.__channels), dtype=np.uint8)
 
         self.__training_agent = None
+        self.__reward_calculator = None
         self.__lvps_env = None
         self.__found_targets = []
         self.__next_agent_id = 0
@@ -56,12 +57,15 @@ class LvpsGymEnv(gym.Env):
     def step(self, action):
         self.__lvps_sim_step += 1
         beginning_targets_found = len(self.__found_targets)
+        beg_nearest_unfound_target_id, beg_nearest_unfound_target_dist, beg_nearest_unfound_heading = self.__training_agent.get_nearest_unfound_target_distance()
 
         #This agent goes
+        
         self.__training_agent.estimate_position()
         action_method = self.__get_action_method(self.__training_agent, action)
         action_result = action_method()
         agent_step_targets_found = len(self.__found_targets)
+        end_nearest_unfound_target_id, end_nearest_unfound_target_dist, end_nearest_unfound_heading  = self.__training_agent.get_nearest_unfound_target_distance()
 
 
         # each other agent performs a step, according to their strategy
@@ -99,12 +103,17 @@ class LvpsGymEnv(gym.Env):
                 truncated = True
 
 
-        reward = LvpsGymRewards(self.__training_agent).calculate_reward(
+        reward = self.__reward_calculator.calculate_reward(
             action_performed=action,
             action_result=action_result,
             target_found=complete_step_targets_found > beginning_targets_found,
             target_found_by_this_agent=agent_step_targets_found > beginning_targets_found,
-            all_targets_found=len(self.__found_targets) == self.__num_targets
+            all_targets_found=len(self.__found_targets) == self.__num_targets,
+            beg_nearest_unfound_target_id=beg_nearest_unfound_target_id,
+            beg_nearest_unfound_target_dist=beg_nearest_unfound_target_dist,
+            end_nearest_unfound_target_id=end_nearest_unfound_target_id,
+            end_nearest_unfound_target_dist=end_nearest_unfound_target_dist,
+            is_within_photo_distance=end_nearest_unfound_target_dist <= self.__training_agent.get_photo_distance()
         )
 
         terminated = len(self.__found_targets) == self.__num_targets
@@ -190,6 +199,7 @@ class LvpsGymEnv(gym.Env):
         self.__drone_strategies = {}
         self.__drone_last_action = {}
         self.__drone_last_result = {}
+        self.__reward_calculator = None
 
         self.__training_agent = None
         self.__next_agent_id = 0
@@ -197,6 +207,8 @@ class LvpsGymEnv(gym.Env):
 
         # add all agents
         self.__add_agents()
+
+        self.__reward_calculator = LvpsGymRewards(self.__training_agent)
 
         # add targets
         self.__add_targets()

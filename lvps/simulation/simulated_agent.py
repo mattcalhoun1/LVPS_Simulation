@@ -395,6 +395,28 @@ class SimulatedAgent:
         
         return closest['x'],closest['y'], closest_heading
         
+
+    # returns lvps coords for the nearest visible target (if any)
+    def get_nearest_unfound_target_distance (self):
+        # returns the distance and direciotn of nearest target to help us decide if the robot will be able to see it
+        min_dist = None
+        closest = None
+        closest_heading = None
+
+        logging.getLogger(__name__).debug(f"Checking for visible unfound targets within sim dist: {self.get_sight_distance()}")
+        vis_targets, vis_headings = self.__lvps_env.get_visible_targets(self.__agent_id, self.get_sight_distance())
+        for i,t in enumerate(vis_targets):
+            if self.__lvps_env.is_target_found(self.__agent_id, t['x'], t['y']):
+                dist = self.__get_distance(self.__lvps_x, self.__lvps_y, t['x'], t['y'])
+                if min_dist is None or dist < min_dist:
+                    closest = t
+                    closest_heading = vis_headings[i]
+
+        if closest is None:
+            return None,None,None
+        
+        return closest, min_dist, closest_heading
+        
     # returns lvps coords for the nearest photographable target (if any)
     def get_nearest_photographable_target_position (self):
         # returns the distance and direciotn of nearest target to help us decide if the robot will be able to see it

@@ -1,4 +1,5 @@
 from lvps.strategies.agent_actions import AgentActions
+import logging
 
 class RewardAmounts:
     StepCostMultiplier = 0.0 # to scale costs down , if desired
@@ -10,6 +11,8 @@ class RewardAmounts:
     FalseReport = -.1
 
     SuccessfulLook = 10
+    SuccessfulCloserLook = 10
+    SuccessfulPhotoDistance = 30
     SuccessfulPhotograph = 50
 
     SomeAgentFoundTarget = 500
@@ -20,14 +23,19 @@ class RewardAmounts:
 class LvpsGymRewards:
     def __init__(self, agent):
         self.__agent = agent
+        self.__target_find_counts = {}
+        self.__target_closer_counts = {}
+        self.__target_photo_distance_counts = {}
+        self.__target_photo_counts = {}
+
     
-    def calculate_reward (self, action_performed, action_result, target_found : bool, target_found_by_this_agent : bool, all_targets_found : bool):
+    def calculate_reward (self, action_performed, action_result, target_found : bool, target_found_by_this_agent : bool, all_targets_found : bool, beg_nearest_unfound_target_id, beg_nearest_unfound_target_dist : float, end_nearest_unfound_target_id, end_nearest_unfound_target_dist : float, is_within_photo_distance : bool):
 
         ##### Penalties #####
         # every action costs a given number of steps
         reward = -1 * AgentActions.StepCost[action_performed] * RewardAmounts.StepCostMultiplier
 
-        # if agent went out of bounds, extremely bad
+        # if agent went out of bounds, extremely bad. depending on game settings, this ends the game
         if self.__agent.is_out_of_bounds():
             reward += RewardAmounts.OutOfBounds
         
@@ -35,7 +43,7 @@ class LvpsGymRewards:
         if self.__agent.get_lvps_environment().is_too_close_to_other_agents(self.__agent.get_id()):
             reward += RewardAmounts.Collision
 
-        # touching an obstacle is bad
+        # touching an obstacle is bad. depending on game settings, this ends the game
         if self.__agent.is_in_obstacle():
             reward += RewardAmounts.InObstacle
 
@@ -45,18 +53,41 @@ class LvpsGymRewards:
 
         ###### Rewards #######
         if action_performed == AgentActions.Look and action_result == True:
-            reward += RewardAmounts.SuccessfulLook
+            # have we already seen this target before
+            if end_nearest_unfound_target_id is not None and end_nearest_unfound_target_id not in self.__target_find_counts:
+                reward += RewardAmounts.SuccessfulLook
+                self.__target_find_counts[end_nearest_unfound_target_id] = 1
+                logging.getLogger(__name__).info(f"Agent rewarded for first time sighting of {end_nearest_unfound_target_id}")
+            # have we closed the distance to the target in question
+            elif end_nearest_unfound_target_id is not None and end_nearest_unfound_target_id == beg_nearest_unfound_target_id and end_nearest_unfound_target_dist < beg_nearest_unfound_target_dist:
+                if end_nearest_unfound_target_id not in self.__target_closer_counts:
+                    self.__target_closer_counts[end_nearest_unfound_target_id] = 1
+                    logging.getLogger(__name__).info(f"Agent rewarded for closing distance to {end_nearest_unfound_target_id}")
+                    reward += RewardAmounts.SuccessfulCloserLook
+            
+            # if we are within photo distance for the first time, reward that
+            if is_within_photo_distance and end_nearest_unfound_target_id not in self.__target_photo_distance_counts:
+                self.__target_photo_distance_counts[end_nearest_unfound_target_id] = 1
+                reward += RewardAmounts.SuccessfulPhotoDistance
+                logging.getLogger(__name__).info(f"Agent rewarded for getting within photo distance of {end_nearest_unfound_target_id}")
+
 
         if action_performed == AgentActions.Photograph and action_result == True:
-            reward += RewardAmounts.SuccessfulPhotograph
+            if end_nearest_unfound_target_id not in self.__target_photo_counts:
+                logging.getLogger(__name__).info(f"Agent rewarded for photo of {end_nearest_unfound_target_id}")
+                reward += RewardAmounts.SuccessfulPhotograph
+                self.__target_photo_counts[end_nearest_unfound_target_id] = 1
 
         if target_found:
+            logging.getLogger(__name__).info(f"Agent rewarded for target find (across all agents)")
             reward += RewardAmounts.SomeAgentFoundTarget
         
         if target_found_by_this_agent:
+            logging.getLogger(__name__).info(f"Agent rewarded for target find (this agent found)")
             reward += RewardAmounts.ThisAgentFoundTarget
 
         if all_targets_found:
+            logging.getLogger(__name__).info(f"Agent rewarded for all targets found")
             reward += RewardAmounts.AllTargetsFound
 
         return reward
