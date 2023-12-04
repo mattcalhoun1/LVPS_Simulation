@@ -409,14 +409,12 @@ class SimulatedAgent:
         for i,t in enumerate(vis_targets):
             if self.__lvps_env.is_target_found(self.__agent_id, t['x'], t['y']) == False:
                 dist = self.__lvps_env.get_agent_target_distance (agent_id = self.__agent_id, target_x=t['x'], target_y=t['y'])
-                logging.getLogger(__name__).info(f"Target {t['id']} dist from sim env is {dist}")
-
                 if min_dist is None or dist < min_dist:
                     closest = t
                     closest_heading = vis_headings[i]
                     min_dist = dist
             else:
-                logging.getLogger(__name__).info(f"Target {t['id']} already found")
+                logging.getLogger(__name__).debug(f"Target {t['id']} already found")
 
         if closest is None:
             return None,None,None
