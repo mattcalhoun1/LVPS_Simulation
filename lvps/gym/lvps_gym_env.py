@@ -39,6 +39,7 @@ class LvpsGymEnv(gym.Env):
         self.__lvps_env = None
         self.__found_targets = []
         self.__next_agent_id = 0
+        self.__truncate_on_out_bounds = True
 
         # drone agent state
         self.__num_drone_agents = 0
@@ -91,6 +92,13 @@ class LvpsGymEnv(gym.Env):
 
         complete_step_targets_found = len(self.__found_targets)
 
+        truncated = False
+        if self.__truncate_on_out_bounds:
+            # if the agent is out of bounds or in an obstacle, end the episode
+            if self.__training_agent.is_out_of_bounds() or self.__training_agent.is_in_obstacle():
+                truncated = True
+
+
         reward = LvpsGymRewards(self.__training_agent).calculate_reward(
             action_performed=action,
             action_result=action_result,
@@ -100,7 +108,6 @@ class LvpsGymEnv(gym.Env):
         )
 
         terminated = len(self.__found_targets) == self.__num_targets
-        truncated = False
         info = {}
 
         if reward > 0:
