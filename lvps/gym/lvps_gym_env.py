@@ -113,7 +113,7 @@ class LvpsGymEnv(gym.Env):
             beg_nearest_unfound_target_dist=beg_nearest_unfound_target_dist,
             end_nearest_unfound_target_id=end_nearest_unfound_target_id,
             end_nearest_unfound_target_dist=end_nearest_unfound_target_dist,
-            is_within_photo_distance=end_nearest_unfound_target_dist <= self.__training_agent.get_photo_distance()
+            is_within_photo_distance=end_nearest_unfound_target_dist is not None and end_nearest_unfound_target_dist <= self.__training_agent.get_photo_distance()
         )
 
         terminated = len(self.__found_targets) == self.__num_targets
