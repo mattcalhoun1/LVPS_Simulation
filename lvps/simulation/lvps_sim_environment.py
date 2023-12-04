@@ -9,9 +9,11 @@ from trig.trig import BasicTrigCalc
 from position.confidence import Confidence
 from lvps.strategies.agent_actions import AgentActions
 from lvps.simulation.sim_events import SimEventSubscriptions, SimEventType
+import uuid
 
 class LvpsSimEnvironment:
-    def __init__(self):
+    def __init__(self, id = None):
+        self.__environment_id = id if id is not None else uuid.uuid1()
         self.__targets = {}
         self.__found_targets = {}
         self.__agents = {}
@@ -23,6 +25,9 @@ class LvpsSimEnvironment:
 
         self.__event_subscriptions = SimEventSubscriptions()
         self.__trig_calc = BasicTrigCalc()
+
+    def get_id (self):
+        return self.__environment_id
 
     def add_event_subscription (self, event_type, listener):
         self.__event_subscriptions.add_subscription(event_type, listener)

@@ -23,7 +23,9 @@ class Train:
     def __init__(self, model_dir):
         self.__model_dir = model_dir
         self.__max_episode_steps = 1000 # max steps per episode
+        self.__max_test_steps = 1000 # max steps per episode
         self.__max_total_steps = 1_000_000
+        self.__test_episodes = 5
 
         # create new instances of the environment
         self.__create_environments('lvps/Search-v0')
@@ -75,7 +77,7 @@ class Train:
         best_model = DQN.load(f'{self.__model_dir}/evaluation/best_model.zip', env=self.__test_env)
         sb3_agent = SB3Agent(best_model)
 
-        _ = evaluate(self.__test_env, sb3_agent, gamma=1.0, episodes=2, max_steps=self.__max_episode_steps, seed=1, show_report=True)
+        _ = evaluate(self.__test_env, sb3_agent, gamma=1.0, episodes=self.__test_episodes, max_steps=self.__max_test_steps, seed=1, show_report=True)
 
     def __recreate_eval_callback(self, environment):
         self.__eval_callback = EvalCallback(

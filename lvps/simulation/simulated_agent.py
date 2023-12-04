@@ -50,9 +50,9 @@ class SimulatedAgent:
         self.__trig_calc = BasicTrigCalc()
 
         if self.__lvps_x is None:
-            logging.getLogger(__name__).info(f"Agent {agent_id} added to LVPS simulation with no awareness of its current position.")
+            logging.getLogger(__name__).info(f"Agent {agent_id} added to LVPS simulation {lvps_env.get_id()} with no awareness of its current position.")
         else:
-            logging.getLogger(__name__).info(f"Agent {agent_id} added to LVPS simulation, known to be at {self.__lvps_x}, {self.__lvps_y}.")
+            logging.getLogger(__name__).info(f"Agent {agent_id} added to LVPS simulation {lvps_env.get_id()}, known to be at {self.__lvps_x}, {self.__lvps_y}.")
 
         self.__look_history = [] # where it has already looked
 
@@ -297,7 +297,7 @@ class SimulatedAgent:
         if not self.__has_recent_position():
             return False
 
-        logging.getLogger(__name__).info(f"Agent {self.__agent_id} photographing")
+        logging.getLogger(__name__).debug(f"Agent {self.__agent_id} photographing")
 
         lvps_target_x, lvps_target_y, lvps_target_heading = self.get_nearest_photographable_target_position()
         #self.__look_history.insert(0, (self.__lvps_x, self.__lvps_y, self.__lvps_heading, self.__relative_search_begin, self.__relative_search_end, self.get_photo_distance()))
@@ -307,7 +307,7 @@ class SimulatedAgent:
         success = lvps_target_x is not None and lvps_target_y is not None
 
         success = success and self.__does_event_happen(AgentActions.SuccessRate[AgentActions.Photograph])
-        logging.getLogger(__name__).info(f"~~~~~~~~ Photographing {'was' if success else 'was not'} successful ~~~~~~~~~~~~~~")
+        logging.getLogger(__name__).info(f"~~~~~~~~ Photographing {'was' if success else 'was not'} successful (Env: {self.__lvps_env.get_id()}) ~~~~~~~~~~~~~~")
 
 
         if success:
@@ -358,7 +358,7 @@ class SimulatedAgent:
         # if a target is visible, this was a success
         success = lvps_target_x is not None and lvps_target_y is not None
         if success:
-            logging.getLogger(__name__).info(f"Agent {self.__agent_id} Found a Target visually!")
+            logging.getLogger(__name__).info(f"Agent {self.__agent_id} Found a Target visually (Env: {self.__lvps_env.get_id()})!")
 
         return success and self.__does_event_happen(AgentActions.SuccessRate[AgentActions.Look])
     

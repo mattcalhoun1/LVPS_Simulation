@@ -53,6 +53,7 @@ class LvpsGymEnv(gym.Env):
 
         self.__num_targets = 2
         self.__lvps_sim_step = 0
+        self.__reset_count = 0
 
     def step(self, action):
         self.__lvps_sim_step += 1
@@ -193,6 +194,7 @@ class LvpsGymEnv(gym.Env):
 
     def reset(self, seed=None, options=None):
         # create a new LVPS simulation
+        self.__reset_count += 1
         self.__lvps_env = None
         self.__found_targets = []
         self.__drone_agents = []
@@ -297,7 +299,7 @@ class LvpsGymEnv(gym.Env):
 
     def get_lvps_environment (self):
         if self.__lvps_env is None:
-            self.__lvps_env = LvpsSimEnvironment()
+            self.__lvps_env = LvpsSimEnvironment(id=self.__reset_count)
         return self.__lvps_env
 
     def __get_total_distance_traveled (self):
