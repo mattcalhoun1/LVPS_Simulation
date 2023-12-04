@@ -16,13 +16,13 @@ import shutil
 register(
      id="lvps/Search-v0",
      entry_point="lvps.gym.lvps_gym_env:LvpsGymEnv",
-     max_episode_steps=10000,
+     max_episode_steps=1000,
 )
 
 class Train:
     def __init__(self, model_dir):
         self.__model_dir = model_dir
-        self.__max_episode_steps = 10_000 # max steps per episode
+        self.__max_episode_steps = 1000 # max steps per episode
         self.__max_total_steps = 500_000
 
         # create new instances of the environment
@@ -34,10 +34,8 @@ class Train:
 
     def __create_environments (self, env_id):
         self.__base_env = AutoResetWrapper(TimeLimit(gymnasium.make(env_id), self.__max_episode_steps))
-        #self.__base_envs = make_vec_env(env_id=env_id, n_envs=env_count, seed=0)
-        #self.__eval_envs = make_vec_env(env_id=env_id, n_envs=env_count, seed=0)
         self.__eval_env = AutoResetWrapper(TimeLimit(gymnasium.make(env_id), self.__max_episode_steps))
-        self.__test_env = gymnasium.make(env_id, render_mode='console')        
+        self.__test_env = AutoResetWrapper(TimeLimit(gymnasium.make(env_id), self.__max_episode_steps))
 
     def __create_empty_model (self, base_env):
         return DQN(
@@ -45,7 +43,7 @@ class Train:
             env = base_env,
             learning_rate = 4e-3, # original 4e-3
 
-            batch_size = 64, # original 128
+            batch_size = 128, # original 128
             buffer_size = 10_000, # original 10k
             learning_starts = 0, # original 0
 
@@ -58,7 +56,7 @@ class Train:
             exploration_initial_eps = 1.0, # original 1.0
             exploration_final_eps = 0.07, # original 0.07
 
-            policy_kwargs = dict(net_arch=[256,128,64]),
+            #policy_kwargs = dict(net_arch=[256,128,64]),
             verbose=1,
             seed=1
         )
@@ -77,7 +75,7 @@ class Train:
         best_model = DQN.load(f'{self.__model_dir}/evaluation/best_model.zip', env=self.__test_env)
         sb3_agent = SB3Agent(best_model)
 
-        _ = evaluate(self.__test_env, sb3_agent, gamma=1.0, episodes=2, max_steps=2000, seed=1)
+        _ = evaluate(self.__test_env, sb3_agent, gamma=1.0, episodes=2, max_steps=self.__max_episode_steps, seed=1, show_report=True)
 
     def __recreate_eval_callback(self, environment):
         self.__eval_callback = EvalCallback(
