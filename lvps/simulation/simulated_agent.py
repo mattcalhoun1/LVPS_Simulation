@@ -415,7 +415,7 @@ class SimulatedAgent:
         if closest is None:
             return None,None,None
         
-        return closest, min_dist, closest_heading
+        return closest['id'], min_dist, closest_heading
         
     # returns lvps coords for the nearest photographable target (if any)
     def get_nearest_photographable_target_position (self):

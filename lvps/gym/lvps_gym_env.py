@@ -65,7 +65,7 @@ class LvpsGymEnv(gym.Env):
         action_method = self.__get_action_method(self.__training_agent, action)
         action_result = action_method()
         agent_step_targets_found = len(self.__found_targets)
-        end_nearest_unfound_target_id, end_nearest_unfound_target_dist, end_nearest_unfound_heading  = self.__training_agent.get_nearest_unfound_target_distance()
+        end_nearest_unfound_target_id, end_nearest_unfound_target_dist, end_nearest_unfound_heading = self.__training_agent.get_nearest_unfound_target_distance()
 
 
         # each other agent performs a step, according to their strategy
