@@ -238,7 +238,7 @@ class LvpsSimEnvironment:
             while ((max_map_side * scale_factor) > max_scaled_side_length):
                 scale_factor -= 0.05
 
-            logging.getLogger(__name__).info(f"Rendered map will be scaled down to {scale_factor}")
+            logging.getLogger(__name__).debug(f"Rendered map will be scaled down to {scale_factor}")
 
             self.__image_scaler = FieldScaler(field_map=field_map, scaled_height=rendered_height, scaled_width=rendered_width, scale_factor=scale_factor, invert_x_axis=True, invert_y_axis=True)
         
@@ -251,7 +251,7 @@ class LvpsSimEnvironment:
             'y':y,
             'heading':heading
         }
-        logging.getLogger(__name__).info(f"Agent {agent.get_id()} added at ({x},{y}) facing {heading}")
+        logging.getLogger(__name__).debug(f"Agent {agent.get_id()} added at ({x},{y}) facing {heading}")
 
     def get_agent_position(self, agent_id):
         agent = self.__agents[agent_id]
@@ -265,7 +265,7 @@ class LvpsSimEnvironment:
             'x':target_x,
             'y':target_y
         }
-        logging.getLogger(__name__).info(f"Target {target_id} added at ({target_x},{target_y})")
+        logging.getLogger(__name__).debug(f"Target {target_id} added at ({target_x},{target_y})")
 
     # returns targets within sight range of the given agent
     def get_visible_targets (self, agent_id, sight_distance):
@@ -350,6 +350,16 @@ class LvpsSimEnvironment:
 
     def get_num_found_targets (self):
         return len(self.__found_targets)
+    
+    # returns actual distance to the target (not estimated).
+    # this should only be used for calculating rewards, not making decisions
+    def get_agent_target_distance (self, agent_id, target_x, target_y):
+        return self.__get_distance(
+            self.__agents[agent_id]['x'],
+            self.__agents[agent_id]['y'],
+            target_x,
+            target_y
+        )
 
     def __find_closest_target (self, x, y):
         # find the target nearest to the specified coords

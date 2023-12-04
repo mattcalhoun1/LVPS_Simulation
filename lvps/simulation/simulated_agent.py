@@ -385,7 +385,7 @@ class SimulatedAgent:
         logging.getLogger(__name__).debug(f"Checking for visible targets within sim dist: {self.get_sight_distance()}")
         vis_targets, vis_headings = self.__lvps_env.get_visible_targets(self.__agent_id, self.get_sight_distance())
         for i,t in enumerate(vis_targets):
-            dist = self.__get_distance(self.__lvps_x, self.__lvps_y, t['x'], t['y'])
+            dist = self.__lvps_env.get_agent_target_distance (agent_id = self.__agent_id, target_x=t['x'], target_y=t['y'])
             if min_dist is None or dist < min_dist:
                 closest = t
                 closest_heading = vis_headings[i]
@@ -396,7 +396,7 @@ class SimulatedAgent:
         return closest['x'],closest['y'], closest_heading
         
 
-    # returns lvps coords for the nearest visible target (if any)
+    # returns distance for nearest unfound target
     def get_nearest_unfound_target_distance (self):
         # returns the distance and direciotn of nearest target to help us decide if the robot will be able to see it
         min_dist = None
@@ -407,7 +407,7 @@ class SimulatedAgent:
         vis_targets, vis_headings = self.__lvps_env.get_visible_targets(self.__agent_id, self.get_sight_distance())
         for i,t in enumerate(vis_targets):
             if self.__lvps_env.is_target_found(self.__agent_id, t['x'], t['y']) == False:
-                dist = self.__get_distance(self.__lvps_x, self.__lvps_y, t['x'], t['y'])
+                dist = self.__lvps_env.get_agent_target_distance (agent_id = self.__agent_id, target_x=t['x'], target_y=t['y'])
                 if min_dist is None or dist < min_dist:
                     closest = t
                     closest_heading = vis_headings[i]
@@ -426,7 +426,7 @@ class SimulatedAgent:
 
         vis_targets, vis_headings = self.__lvps_env.get_visible_targets(self.__agent_id, self.get_photo_distance())
         for i,t in enumerate(vis_targets):
-            dist = self.__get_distance(self.__lvps_x, self.__lvps_y, t['x'], t['y'])
+            dist = self.__lvps_env.get_agent_target_distance (agent_id = self.__agent_id, target_x=t['x'], target_y=t['y'])
             if min_dist is None or dist < min_dist:
                 closest = t
                 closest_heading = vis_headings[i]
