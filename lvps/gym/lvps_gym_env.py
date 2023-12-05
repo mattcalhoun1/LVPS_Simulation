@@ -14,7 +14,6 @@ import numpy as np
 import logging
 
 class LvpsGymEnv(gym.Env):
-
     metadata = {"render_modes": ["console"]}
 
     def __init__(self, render_mode=None):
@@ -125,7 +124,6 @@ class LvpsGymEnv(gym.Env):
 
         return self.__get_agent_observation(self.__training_agent), reward, terminated, truncated, info
 
-
     def __get_action_method (self, agent : SimulatedAgent, action_num):
         action_map = {
             AgentActions.EstimatePosition : agent.estimate_position,
@@ -189,8 +187,6 @@ class LvpsGymEnv(gym.Env):
             filtered_action_params = action_params
 
         return action_map[action_num], filtered_action_params
-
-
 
     def reset(self, seed=None, options=None):
         # create a new LVPS simulation
@@ -256,7 +252,9 @@ class LvpsGymEnv(gym.Env):
         return lvps_agent
 
     def __add_agents (self):
-        field_renderer = FieldRenderer(field_map = self.get_lvps_environment().get_map(), map_scaler=self.get_lvps_environment().get_field_image_scaler())
+        field_renderer = FieldRenderer(
+            field_map = self.get_lvps_environment().get_map(),
+            map_scaler=self.get_lvps_environment().get_field_image_scaler())
 
         # add the agent in training
         self.__training_agent = self.__create_and_add_single_agent(field_renderer=field_renderer)

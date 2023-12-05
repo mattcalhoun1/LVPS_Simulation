@@ -22,6 +22,7 @@ class ReasonableSearchStrategy(AgentStrategy):
         lvps_x, lvps_y, lvps_heading, lvps_confidence = lvps_agent.get_last_coords_and_heading()
         obstacle_bound = lvps_agent.is_in_obstacle()
 
+        # render the field as an image
         if self.__render_field:
             lvps_agent.get_field_renderer().save_field_image(
                 f'/tmp/lvpssim/agent_{lvps_agent.get_id()}_step_{step_count}.png',
@@ -32,25 +33,29 @@ class ReasonableSearchStrategy(AgentStrategy):
                 height_inches=4,
                 dpi=100)
 
+        # if we just tried to get position and it failed, adjust the vehicle a little and try again
         if last_action == AgentActions.EstimatePosition:
             if last_action_result == False:
                 self.__consecutive_position_fails += 1
                 if self.__consecutive_position_fails > self.__max_position_fails:
                     return AgentActions.AdjustRandomly, action_params
             else:
-                # reset the counter and let actions proceed
                 self.__consecutive_position_fails = 0
 
         # if we don't know where we are, need to figure that out
         if lvps_x is None or lvps_y is None:
-            # see if the last action was to estimate (and failed)
             return AgentActions.EstimatePosition, action_params
+
+        # if we went out of bounds, go to our safe space (wherever that is)
         if lvps_agent.is_out_of_bounds():
             logging.getLogger(__name__).warning(f"Agent is out of bounds, going to random location")
             return self.__queue_go_to_safe_place (lvps_agent, action_params)
+
+        # if we are stuck to an obstacle, try to get out
         elif obstacle_bound:
             logging.getLogger(__name__).warning(f"Agent stuck in obstacle, going to random location")
             return self.__queue_go_to_safe_place (lvps_agent, action_params)
+        
         elif last_action == AgentActions.ReportFound:
             # need to move to a random location so we dont get stuck here
             # even if the report fails. if we found the same item again, the report fails
