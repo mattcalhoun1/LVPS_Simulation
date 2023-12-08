@@ -93,7 +93,7 @@ class SearchAgent(mesa.Agent):
         return self.__lvps_sim_agent.rotate_right_big()
 
     def adjust_randomly (self, action_params):
-        return self.__lvps_sim_agent.adjust_randomly(action_params=action_params)
+        return self.__lvps_sim_agent.adjust_randomly()
 
     def rotate(self, action_params):
         return self.__lvps_sim_agent.rotate(action_params=action_params)
