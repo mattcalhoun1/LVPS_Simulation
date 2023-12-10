@@ -32,7 +32,7 @@ class LvpsGymEnv(gym.Env):
 
         # observation space is field rendered images as np arrays
         self.observation_space = spaces.Box(low=0, high=255,
-                                            shape=(self.__scaled_map_height, self.__scaled_map_width, self.__channels), dtype=np.uint8)
+                                            shape=(self.__scaled_map_height, self.__scaled_map_width, 3), dtype=np.uint8)
 
         self.__training_agent = None
         self.__reward_calculator = None
@@ -59,11 +59,12 @@ class LvpsGymEnv(gym.Env):
         beginning_targets_found = len(self.__found_targets)
         beg_nearest_unfound_target_id, beg_nearest_unfound_target_dist, beg_nearest_unfound_heading = self.__training_agent.get_nearest_unfound_target_distance()
 
-        #This agent goes
-        
-        self.__training_agent.estimate_position()
+        # This agent goes
+        self.__update_agent_coords(agent=self.__training_agent, force_refresh=False)
         action_method = self.__get_action_method(self.__training_agent, action)
         action_result = action_method()
+        
+        self.__update_agent_coords(agent=self.__training_agent, force_refresh=True)
         agent_step_targets_found = len(self.__found_targets)
         end_nearest_unfound_target_id, end_nearest_unfound_target_dist, end_nearest_unfound_heading = self.__training_agent.get_nearest_unfound_target_distance()
 
@@ -74,6 +75,7 @@ class LvpsGymEnv(gym.Env):
             agent_strategy = self.__drone_strategies[d.get_id()]
             drone_last_action = None if d.get_id() not in self.__drone_last_action else self.__drone_last_action[d.get_id()]
             drone_last_result = None if d.get_id() not in self.__drone_last_result else self.__drone_last_result[d.get_id()]
+            self.__update_agent_coords(agent=d, force_refresh=False)
 
             next_drone_action, next_drone_params = agent_strategy.get_next_action (
                 lvps_agent = d,
@@ -93,6 +95,7 @@ class LvpsGymEnv(gym.Env):
                 drone_result = drone_method()
             self.__drone_last_action[d.get_id()] = next_drone_action
             self.__drone_last_result[d.get_id()] = drone_result
+            self.__update_agent_coords(agent=d, force_refresh=True)
 
         complete_step_targets_found = len(self.__found_targets)
 
@@ -124,9 +127,13 @@ class LvpsGymEnv(gym.Env):
 
         return self.__get_agent_observation(self.__training_agent), reward, terminated, truncated, info
 
+    def __update_agent_coords (self, agent : SimulatedAgent, force_refresh : bool):
+        last_x, last_y, last_heading, last_conf = agent.get_last_coords_and_heading()
+        if force_refresh or last_x is None:
+            agent.estimate_position()
+
     def __get_action_method (self, agent : SimulatedAgent, action_num):
         action_map = {
-            AgentActions.EstimatePosition : agent.estimate_position,
             AgentActions.Look : agent.look,
             AgentActions.Photograph : agent.photograph,
             AgentActions.Nothing : agent.do_nothing,
@@ -189,6 +196,8 @@ class LvpsGymEnv(gym.Env):
         return action_map[action_num], filtered_action_params
 
     def reset(self, seed=None, options=None):
+        super().reset(seed=seed)
+
         # create a new LVPS simulation
         self.__reset_count += 1
         self.__lvps_env = None

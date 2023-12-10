@@ -1,14 +1,12 @@
 import gymnasium
 from gymnasium.envs.registration import register
 from stable_baselines3.common.env_checker import check_env
-from stable_baselines3 import DQN
-from stable_baselines3.dqn.policies import CnnPolicy
+from stable_baselines3 import A2C
 from stable_baselines3.common.callbacks import EvalCallback
 from gymnasium.wrappers.time_limit import TimeLimit
 from gymnasium.wrappers.autoreset import AutoResetWrapper
 from stable_baselines3.common.env_util import make_vec_env
 from lvps.gym.rbean_utils import evaluate, SB3Agent
-from stable_baselines3.common.type_aliases import PyTorchObs, Schedule
 import warnings
 warnings.filterwarnings('ignore')
 import logging
@@ -21,7 +19,8 @@ register(
      max_episode_steps=1000,
 )
 
-class Train:
+# this is not ready to use yet
+class TrainA2C:
     def __init__(self, model_dir):
         self.__model_dir = model_dir
         self.__max_episode_steps = 1000 # max steps per episode
@@ -37,19 +36,18 @@ class Train:
         self.__eval_callback = None
 
     def __create_environments (self, env_id):
-        self.__base_env = AutoResetWrapper(TimeLimit(gymnasium.make(env_id), self.__max_episode_steps))
-        self.__eval_env = AutoResetWrapper(TimeLimit(gymnasium.make(env_id), self.__max_episode_steps))
+        self.__base_env = make_vec_env('lvps/Search-v0', n_envs=4)
+        self.__eval_env = make_vec_env('lvps/Search-v0', n_envs=4)
         self.__test_env = AutoResetWrapper(TimeLimit(gymnasium.make(env_id), self.__max_episode_steps))
 
     def __create_empty_model (self, base_env):
-
-        return DQN(
+        return A2C(
             policy = "CnnPolicy",#"MlpPolicy",
             env = base_env,
             #learning_rate = 4e-3, # original 4e-3
 
             batch_size = 128, # original 128
-            buffer_size = 1, # original 4k. However, memory is contained in the observation image, so do we need a buffer?
+            buffer_size = 4_000, # original 10k
             learning_starts = 0, # original 0
 
             gamma = 0.98, # original 0.98
@@ -61,7 +59,7 @@ class Train:
             exploration_initial_eps = 1.0, # original 1.0
             exploration_final_eps = 0.07, # original 0.07
 
-            policy_kwargs = dict(net_arch=[256,128,64]),
+            #policy_kwargs = dict(net_arch=[256,128,64]),
             verbose=1,
             seed=1
         )
@@ -93,7 +91,7 @@ class Train:
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s [%(levelname)s] %(module)s:%(message)s', level=logging.INFO)
-    train = Train('/home/matt/projects/LVPS_Simulation/models')
+    train = TrainA2C('/home/matt/projects/LVPS_Simulation/models')
 
     train.train()
     train.test()

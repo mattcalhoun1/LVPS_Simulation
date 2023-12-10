@@ -10,6 +10,7 @@ from lvps.simulation.simulated_agent import SimulatedAgent
 from lvps.simulation.sim_events import SimEventType
 from lvps.simulation.agent_types import AgentTypes
 from ...strategies.reasonable_search_strategy import ReasonableSearchStrategy
+from ...strategies.rl_search_strategy import RLSearchStrategy
 from ...strategies.random_search_strategy import RandomSearchStrategy
 
 import numpy as np
@@ -184,7 +185,8 @@ class AutonomousSearch(mesa.Model):
 
     def __get_agent_strategy (self):
         #return RandomSearchStrategy()
-        return ReasonableSearchStrategy(render_field=False)
+        #return ReasonableSearchStrategy(render_field=False)
+        return RLSearchStrategy(environment=self.__lvps_env, model_file='/home/matt/projects/lvps_rl_models/first/best_model.zip')
 
     def step(self):
         if len(self.__found_targets) < self.num_targets:
