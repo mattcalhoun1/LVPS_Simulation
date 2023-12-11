@@ -30,6 +30,7 @@ class AutonomousSearch(mesa.Model):
         self.__search_agents = {}
         self.__lvps_env = None
         self.__next_agent_id = 0
+        self.__grayscale = True
 
         logging.getLogger(__name__).info(f"AutonomousSearch mesa model height: {height}, width: {width}")
 
@@ -71,7 +72,7 @@ class AutonomousSearch(mesa.Model):
         # Create search agents, drop onto random spots
 
         # the agents get a common field renderer, which allows them to export PNG files of the sim, with optional awareness of other agents' location
-        field_renderer = FieldRenderer(field_map = self.get_lvps_environment().get_map(), map_scaler=self.get_lvps_environment().get_field_image_scaler())
+        field_renderer = FieldRenderer(field_map = self.get_lvps_environment().get_map(), map_scaler=self.get_lvps_environment().get_field_image_scaler(), grayscale=self.__grayscale)
         for i in range(self.num_robots):
             lvps_x,lvps_y = self.get_field_sim_scaler().get_random_traversable_coords()
             lvps_heading = random.randrange(-1800,1800)/10 # pick a random starting heading
@@ -186,7 +187,7 @@ class AutonomousSearch(mesa.Model):
     def __get_agent_strategy (self):
         #return RandomSearchStrategy()
         #return ReasonableSearchStrategy(render_field=False)
-        return RLSearchStrategy(environment=self.__lvps_env, model_file='/home/matt/projects/lvps_rl_models/first/best_model.zip')
+        return RLSearchStrategy(environment=self.__lvps_env, model_file='/home/matt/projects/lvps_rl_models/bw/best_model.zip')
 
     def step(self):
         if len(self.__found_targets) < self.num_targets:

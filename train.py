@@ -49,7 +49,7 @@ class Train:
             #learning_rate = 4e-3, # original 4e-3
 
             batch_size = 128, # original 128
-            buffer_size = 1, # original 4k. However, memory is contained in the observation image, so do we need a buffer?
+            buffer_size = 100, # original 4k. However, memory is contained in the observation image, so do we need a buffer?
             learning_starts = 0, # original 0
 
             gamma = 0.98, # original 0.98
@@ -59,9 +59,9 @@ class Train:
 
             exploration_fraction = 0.2, # original 0.2
             exploration_initial_eps = 1.0, # original 1.0
-            exploration_final_eps = 0.07, # original 0.07
+            exploration_final_eps = 0.05, # original 0.07
 
-            policy_kwargs = dict(net_arch=[256,128,64]),
+            policy_kwargs = dict(net_arch=[128,128,64]),
             verbose=1,
             seed=1
         )
@@ -85,7 +85,10 @@ class Train:
     def __recreate_eval_callback(self, environment):
         self.__eval_callback = EvalCallback(
             environment, eval_freq=5000,
-            best_model_save_path=f'{self.__model_dir}/evaluation/', log_path=f'{self.__model_dir}/evaluation/', warn=False
+            best_model_save_path=f'{self.__model_dir}/evaluation/',
+            log_path=f'{self.__model_dir}/evaluation/',
+            warn=False,
+            n_eval_episodes=3
         )        
 
     #def check_env (self):

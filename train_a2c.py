@@ -23,9 +23,9 @@ register(
 class TrainA2C:
     def __init__(self, model_dir):
         self.__model_dir = model_dir
-        self.__max_episode_steps = 1000 # max steps per episode
-        self.__max_test_steps = 1000 # max steps per episode
-        self.__max_total_steps = 1_000_000
+        self.__max_episode_steps = 100#1000 # max steps per episode
+        self.__max_test_steps = 100#1000 # max steps per episode
+        self.__max_total_steps = 100#1_000_000
         self.__test_episodes = 5
 
         # create new instances of the environment
@@ -36,9 +36,12 @@ class TrainA2C:
         self.__eval_callback = None
 
     def __create_environments (self, env_id):
-        self.__base_env = make_vec_env('lvps/Search-v0', n_envs=4)
-        self.__eval_env = make_vec_env('lvps/Search-v0', n_envs=4)
-        self.__test_env = AutoResetWrapper(TimeLimit(gymnasium.make(env_id), self.__max_episode_steps))
+        self.__base_env = make_vec_env('lvps/Search-v0', n_envs=4, wrapper_class=self.__wrap_env)
+        self.__eval_env = make_vec_env('lvps/Search-v0', n_envs=4, wrapper_class=self.__wrap_env)
+        self.__test_env = self.__wrap_env(gymnasium.make(env_id))
+
+    def __wrap_env (self, plain_env):
+        return AutoResetWrapper(TimeLimit(plain_env, self.__max_episode_steps))
 
     def __create_empty_model (self, base_env):
         return A2C(
@@ -46,18 +49,17 @@ class TrainA2C:
             env = base_env,
             #learning_rate = 4e-3, # original 4e-3
 
-            batch_size = 128, # original 128
-            buffer_size = 4_000, # original 10k
-            learning_starts = 0, # original 0
+            #buffer_size = 4_000, # original 10k
+            #learning_starts = 0, # original 0
 
             gamma = 0.98, # original 0.98
-            target_update_interval = 600, # original 600
+            #target_update_interval = 600, # original 600
             #train_freq = 16, # original 16
             #gradient_steps = 8, # original 8
 
-            exploration_fraction = 0.2, # original 0.2
-            exploration_initial_eps = 1.0, # original 1.0
-            exploration_final_eps = 0.07, # original 0.07
+            #exploration_fraction = 0.2, # original 0.2
+            #exploration_initial_eps = 1.0, # original 1.0
+            #exploration_final_eps = 0.07, # original 0.07
 
             #policy_kwargs = dict(net_arch=[256,128,64]),
             verbose=1,
@@ -66,24 +68,36 @@ class TrainA2C:
 
 
     def train (self):
-        logging.getLogger(__name__).info ("Training a new agent...")
+        logging.getLogger(__name__).info ("Training a new A2C agent...")
         # create a new empty model
         model = self.__create_empty_model(self.__base_env)
         self.__recreate_eval_callback(self.__eval_env)
 
         model = model.learn(total_timesteps=self.__max_total_steps, callback=self.__eval_callback, log_interval=1, progress_bar=True)
+        model.save(f'{self.__model_dir}/final/model')
+        self
 
-    def test (self):
+    def test_best (self):
         logging.getLogger(__name__).info ("Testing agent...")
-        best_model = DQN.load(f'{self.__model_dir}/evaluation/best_model.zip', env=self.__test_env)
+        best_model = A2C.load(f'{self.__model_dir}/evaluation/best_model.zip', env=self.__test_env)
+        sb3_agent = SB3Agent(best_model)
+
+        _ = evaluate(self.__test_env, sb3_agent, gamma=1.0, episodes=self.__test_episodes, max_steps=self.__max_test_steps, seed=1, show_report=True)
+
+    def test_final (self):
+        logging.getLogger(__name__).info ("Testing final agent...")
+        best_model = A2C.load(f'{self.__model_dir}/final/model', env=self.__test_env)
         sb3_agent = SB3Agent(best_model)
 
         _ = evaluate(self.__test_env, sb3_agent, gamma=1.0, episodes=self.__test_episodes, max_steps=self.__max_test_steps, seed=1, show_report=True)
 
     def __recreate_eval_callback(self, environment):
         self.__eval_callback = EvalCallback(
-            environment, eval_freq=5000,
-            best_model_save_path=f'{self.__model_dir}/evaluation/', log_path=f'{self.__model_dir}/evaluation/', warn=False
+            environment, eval_freq=1000,
+            best_model_save_path=f'{self.__model_dir}/evaluation/',
+            log_path=f'{self.__model_dir}/evaluation/',
+            warn=False,
+            n_eval_episodes=3
         )        
 
     #def check_env (self):
@@ -94,7 +108,7 @@ if __name__ == '__main__':
     train = TrainA2C('/home/matt/projects/LVPS_Simulation/models')
 
     train.train()
-    train.test()
+    train.test_final()
 
 
 

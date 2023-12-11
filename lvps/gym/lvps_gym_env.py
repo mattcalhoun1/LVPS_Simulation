@@ -21,7 +21,7 @@ class LvpsGymEnv(gym.Env):
 
         self.__scaled_map_height = 400
         self.__scaled_map_width = 400
-        self.__channels = 3
+        self.__grayscale = True
 
         self.__observation_image_height_inches = 4
         self.__observation_image_width_inches = 4
@@ -32,7 +32,7 @@ class LvpsGymEnv(gym.Env):
 
         # observation space is field rendered images as np arrays
         self.observation_space = spaces.Box(low=0, high=255,
-                                            shape=(self.__scaled_map_height, self.__scaled_map_width, 3), dtype=np.uint8)
+                                            shape=(self.__scaled_map_height, self.__scaled_map_width, 1 if self.__grayscale else 3), dtype=np.uint8)
 
         self.__training_agent = None
         self.__reward_calculator = None
@@ -123,9 +123,14 @@ class LvpsGymEnv(gym.Env):
         info = {}
 
         if reward > 0:
-            logging.getLogger(__name__).info(f"Action: {AgentActions.Names[action]}, Result: {action_result}, Reward: {reward}")
+            logging.getLogger(__name__).info(f"Action: {self.__get_action_name(action)}, Result: {action_result}, Reward: {reward}")
 
         return self.__get_agent_observation(self.__training_agent), reward, terminated, truncated, info
+    
+    def __get_action_name(self, action):
+        if type(action) is np.array or type(action) is np.ndarray:
+            return AgentActions.Names[action.argmax()]
+        return AgentActions.Names[action]        
 
     def __update_agent_coords (self, agent : SimulatedAgent, force_refresh : bool):
         last_x, last_y, last_heading, last_conf = agent.get_last_coords_and_heading()
@@ -151,6 +156,9 @@ class LvpsGymEnv(gym.Env):
             AgentActions.RotateRightMedium : agent.rotate_right_medium,
             AgentActions.RotateRightBig : agent.rotate_right_big
         }
+
+        if type(action_num) is np.array or type(action_num) is np.ndarray:
+            return action_map[action_num.argmax()]
 
         return action_map[action_num]
 
@@ -263,7 +271,8 @@ class LvpsGymEnv(gym.Env):
     def __add_agents (self):
         field_renderer = FieldRenderer(
             field_map = self.get_lvps_environment().get_map(),
-            map_scaler=self.get_lvps_environment().get_field_image_scaler())
+            map_scaler=self.get_lvps_environment().get_field_image_scaler(),
+            grayscale=self.__grayscale)
 
         # add the agent in training
         self.__training_agent = self.__create_and_add_single_agent(field_renderer=field_renderer)

@@ -8,8 +8,9 @@ from lvps.gym.lvps_gym_env import LvpsGymEnv
 import gymnasium
 import numpy as np
 from .agent_strategy import AgentStrategy
-from stable_baselines3 import DQN
-import stable_baselines3 as sb3
+from stable_baselines3 import A2C, DQN
+from stable_baselines3.common.policies import obs_as_tensor
+import torch
 
 register(
      id="lvps/Search-v0",
@@ -30,13 +31,25 @@ class RLSearchStrategy(AgentStrategy):
         self.__gym_env = LvpsGymEnv()
         self.__gym_env_initialized = False
 
-        #self.__rl_model = DQN.load(model_file, device=device, print_system_info=True, env=LvpsGymEnv(), force_reset=True)
-        self.__rl_model = DQN.load(model_file, device=self.__device, env=self.__gym_env)
+        self.__rl_model = DQN.load(model_file)#, device=device, print_system_info=True, env=LvpsGymEnv(), force_reset=True)
+        self.__rl_model.set_logger(logging.getLogger(__name__))
         self.__gym_env.reset()
         #self.__rl_model.batch_size = 1
         self.__observation_image_height_inches = 4
         self.__observation_image_width_inches = 4
         self.__observation_image_dpi = 100       
+
+    def __predict_proba(self, model, obs):
+        #obs_tensor = obs_as_tensor(obs, model.policy.device)
+        #dis = model.policy.get_distribution(obs)
+
+        reordered_obs = np.transpose(obs, (2,0,1))
+
+        logging.getLogger(__name__).info(f"Reordered shape: {reordered_obs.shape}")
+        logging.getLogger(__name__).info(f"cnn model obs space: {model.policy.observation_space}")
+
+        probs = model.policy.predict(reordered_obs, deterministic = False)
+        return probs
 
     def get_next_action (self, lvps_agent : SimulatedAgent, last_action, last_action_result, step_count):
         logging.getLogger(__name__).info(f"Determining next action for agent {lvps_agent.get_id()}")
@@ -64,12 +77,12 @@ class RLSearchStrategy(AgentStrategy):
             height_inches=self.__observation_image_height_inches,
             dpi=self.__observation_image_dpi
         ).copy()#.reshape(3, 400, 400)
-        logging.getLogger(__name__).info(f"Observation shape: {obs.shape}, {obs.dtype}")
+        #logging.getLogger(__name__).info(f"Observation shape: {obs.shape}, {obs.dtype}")
 
-        for r in range(400):
-            for c in range(400):
-                if obs[r][c] != 0 and obs[r][c] != 255:
-                    logging.getLogger(__name__).info(f"{obs[r][c]}")
+        #for r in range(400):
+        #    for c in range(400):
+        #        if obs[r][c] != 0 and obs[r][c] != 255:
+        #            logging.getLogger(__name__).info(f"{obs[r][c]}")
 
         #obs_tensor = torch.from_numpy(obs)
 
@@ -77,16 +90,25 @@ class RLSearchStrategy(AgentStrategy):
         #logging.getLogger(__name__).info(f"observation space: {self.__rl_model.get_env().observation_space}")
         #logging.getLogger(__name__).info(f"observation: {obs[250][250]}")
 
+        #probs = self.__predict_proba(self.__rl_model, obs)
+        #logging.getLogger(__name__).info(f"RL Probs: {probs}")
+
         action, _states = self.__rl_model.predict(obs, {}, deterministic = True)
-        logging.getLogger(__name__).info(f"RL Model returned type: {type(action)}, shape: {action.shape} -  {action}, {_states}")        
+        #logging.getLogger(__name__).info(f"RL Model returned type: {type(action)}, shape: {action.shape} -  {action}, {_states}")        
+        selected_action = action
+        if type(action) is np.array or type(action) is np.ndarray:
+            selected_action = np.argmax(action)
         lvps_agent.estimate_position()
+        logging.getLogger(__name__).info(f"Agent selected action {AgentActions.Names[selected_action]}")
 
-        if len(action.shape) > 0:
-            selected_action = action[action.argmax]
+        return selected_action, {}
 
-            logging.getLogger(__name__).info(f"RL Model chooses action {AgentActions.Names[selected_action]}")
+        #if len(action.shape) > 0:
+        #    selected_action = action[action.argmax]
 
-            return selected_action, {}
-        else:
-            logging.getLogger(__name__).info("Model gave us nothing.")
-            return AgentActions.Nothing, {}
+        #    logging.getLogger(__name__).info(f"RL Model chooses action {AgentActions.Names[selected_action]}")
+
+        #    return selected_action, {}
+        #else:
+        #    logging.getLogger(__name__).info("Model gave us nothing.")
+        #    return AgentActions.Nothing, {}
