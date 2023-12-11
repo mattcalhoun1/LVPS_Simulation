@@ -35,7 +35,7 @@ class LvpsGymRewards:
 
         if type(action_performed) is np.array or type(action_performed) is np.ndarray:
             action_performed = action_performed.argmax()
-        
+
         ##### Penalties #####
         # every action costs a given number of steps
         reward = -1 * AgentActions.StepCost[action_performed] * RewardAmounts.StepCostMultiplier

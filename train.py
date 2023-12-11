@@ -27,13 +27,16 @@ class Train:
         self.__max_episode_steps = 1000 # max steps per episode
         self.__max_test_steps = 1000 # max steps per episode
         self.__max_total_steps = 1_000_000
-        self.__test_episodes = 5
+        self.__test_episodes = 3
 
         # create new instances of the environment
         self.__create_environments('lvps/Search-v0')
 
         if os.path.exists(f'{model_dir}/evaluation/'):
             shutil.rmtree(f'{model_dir}/evaluation/')
+        if os.path.exists(f'{model_dir}/final/'):
+            shutil.rmtree(f'{model_dir}/final/')
+
         self.__eval_callback = None
 
     def __create_environments (self, env_id):
@@ -44,7 +47,7 @@ class Train:
     def __create_empty_model (self, base_env):
 
         return DQN(
-            policy = "CnnPolicy",#"MlpPolicy",
+            policy = "CnnPolicy",
             env = base_env,
             #learning_rate = 4e-3, # original 4e-3
 
@@ -74,10 +77,18 @@ class Train:
         self.__recreate_eval_callback(self.__eval_env)
 
         model = model.learn(total_timesteps=self.__max_total_steps, callback=self.__eval_callback, log_interval=1, progress_bar=True)
+        model.save(f'{self.__model_dir}/final/model')
 
-    def test (self):
+    def test_best (self):
         logging.getLogger(__name__).info ("Testing agent...")
         best_model = DQN.load(f'{self.__model_dir}/evaluation/best_model.zip', env=self.__test_env)
+        sb3_agent = SB3Agent(best_model)
+
+        _ = evaluate(self.__test_env, sb3_agent, gamma=1.0, episodes=self.__test_episodes, max_steps=self.__max_test_steps, seed=1, show_report=True)
+
+    def test_final (self):
+        logging.getLogger(__name__).info ("Testing final agent...")
+        best_model = DQN.load(f'{self.__model_dir}/final/model', env=self.__test_env)
         sb3_agent = SB3Agent(best_model)
 
         _ = evaluate(self.__test_env, sb3_agent, gamma=1.0, episodes=self.__test_episodes, max_steps=self.__max_test_steps, seed=1, show_report=True)
@@ -88,7 +99,7 @@ class Train:
             best_model_save_path=f'{self.__model_dir}/evaluation/',
             log_path=f'{self.__model_dir}/evaluation/',
             warn=False,
-            n_eval_episodes=3
+            n_eval_episodes=2
         )        
 
     #def check_env (self):
@@ -99,7 +110,7 @@ if __name__ == '__main__':
     train = Train('/home/matt/projects/LVPS_Simulation/models')
 
     train.train()
-    train.test()
+    train.test_final()
 
 
 

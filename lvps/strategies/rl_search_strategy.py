@@ -48,7 +48,7 @@ class RLSearchStrategy(AgentStrategy):
         logging.getLogger(__name__).info(f"Reordered shape: {reordered_obs.shape}")
         logging.getLogger(__name__).info(f"cnn model obs space: {model.policy.observation_space}")
 
-        probs = model.policy.predict(reordered_obs, deterministic = False)
+        probs, _ = model.policy.predict(reordered_obs, deterministic = False)
         return probs
 
     def get_next_action (self, lvps_agent : SimulatedAgent, last_action, last_action_result, step_count):
@@ -90,8 +90,8 @@ class RLSearchStrategy(AgentStrategy):
         #logging.getLogger(__name__).info(f"observation space: {self.__rl_model.get_env().observation_space}")
         #logging.getLogger(__name__).info(f"observation: {obs[250][250]}")
 
-        #probs = self.__predict_proba(self.__rl_model, obs)
-        #logging.getLogger(__name__).info(f"RL Probs: {probs}")
+        probs = self.__predict_proba(self.__rl_model, obs)
+        logging.getLogger(__name__).info(f"RL Probs: {AgentActions.Names[probs.argmax()]}")
 
         action, _states = self.__rl_model.predict(obs, {}, deterministic = True)
         #logging.getLogger(__name__).info(f"RL Model returned type: {type(action)}, shape: {action.shape} -  {action}, {_states}")        

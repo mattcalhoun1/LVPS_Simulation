@@ -33,6 +33,8 @@ class TrainA2C:
 
         if os.path.exists(f'{model_dir}/evaluation/'):
             shutil.rmtree(f'{model_dir}/evaluation/')
+        if os.path.exists(f'{model_dir}/final/'):
+            shutil.rmtree(f'{model_dir}/final/')
         self.__eval_callback = None
 
     def __create_environments (self, env_id):
@@ -75,7 +77,6 @@ class TrainA2C:
 
         model = model.learn(total_timesteps=self.__max_total_steps, callback=self.__eval_callback, log_interval=1, progress_bar=True)
         model.save(f'{self.__model_dir}/final/model')
-        self
 
     def test_best (self):
         logging.getLogger(__name__).info ("Testing agent...")
