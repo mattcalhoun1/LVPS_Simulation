@@ -49,6 +49,9 @@ class RLSearchStrategy(AgentStrategy):
         logging.getLogger(__name__).info(f"cnn model obs space: {model.policy.observation_space}")
 
         probs, _ = model.policy.predict(reordered_obs, deterministic = False)
+
+        logging.getLogger(__name__).info(f"All probs: {probs}")
+
         return probs
 
     def get_next_action (self, lvps_agent : SimulatedAgent, last_action, last_action_result, step_count):
@@ -91,13 +94,13 @@ class RLSearchStrategy(AgentStrategy):
         #logging.getLogger(__name__).info(f"observation: {obs[250][250]}")
 
         probs = self.__predict_proba(self.__rl_model, obs)
-        logging.getLogger(__name__).info(f"RL Probs: {AgentActions.Names[probs.argmax()]}")
+        logging.getLogger(__name__).info(f"RL Probs: {AgentActions.Names[probs.max()]}")
 
         action, _states = self.__rl_model.predict(obs, {}, deterministic = True)
         #logging.getLogger(__name__).info(f"RL Model returned type: {type(action)}, shape: {action.shape} -  {action}, {_states}")        
         selected_action = action
         if type(action) is np.array or type(action) is np.ndarray:
-            selected_action = np.argmax(action)
+            selected_action = action.max()
         lvps_agent.estimate_position()
         logging.getLogger(__name__).info(f"Agent selected action {AgentActions.Names[selected_action]}")
 
