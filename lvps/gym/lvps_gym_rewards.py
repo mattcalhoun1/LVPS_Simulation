@@ -34,7 +34,7 @@ class LvpsGymRewards:
     def calculate_reward (self, action_performed, action_result, target_found : bool, target_found_by_this_agent : bool, all_targets_found : bool, beg_nearest_unfound_target_id, beg_nearest_unfound_target_dist : float, end_nearest_unfound_target_id, end_nearest_unfound_target_dist : float, is_within_photo_distance : bool):
 
         if type(action_performed) is np.array or type(action_performed) is np.ndarray:
-            action_performed = action_performed.argmax()
+            action_performed = action_performed.max()
 
         ##### Penalties #####
         # every action costs a given number of steps

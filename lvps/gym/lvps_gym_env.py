@@ -129,7 +129,7 @@ class LvpsGymEnv(gym.Env):
     
     def __get_action_name(self, action):
         if type(action) is np.array or type(action) is np.ndarray:
-            return AgentActions.Names[action.argmax()]
+            return AgentActions.Names[action.max()]
         return AgentActions.Names[action]        
 
     def __update_agent_coords (self, agent : SimulatedAgent, force_refresh : bool):
@@ -158,7 +158,7 @@ class LvpsGymEnv(gym.Env):
         }
 
         if type(action_num) is np.array or type(action_num) is np.ndarray:
-            return action_map[action_num.argmax()]
+            return action_map[action_num.max()]
 
         return action_map[action_num]
 
