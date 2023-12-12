@@ -23,9 +23,9 @@ register(
 class TrainA2C:
     def __init__(self, model_dir):
         self.__model_dir = model_dir
-        self.__max_episode_steps = 100#1000 # max steps per episode
-        self.__max_test_steps = 100#1000 # max steps per episode
-        self.__max_total_steps = 100#1_000_000
+        self.__max_episode_steps = 1000 # max steps per episode
+        self.__max_test_steps = 1000 # max steps per episode
+        self.__max_total_steps = 1_000_000
         self.__test_episodes = 5
 
         # create new instances of the environment
