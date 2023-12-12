@@ -6,6 +6,8 @@ from stable_baselines3.common.callbacks import EvalCallback
 from gymnasium.wrappers.time_limit import TimeLimit
 from gymnasium.wrappers.autoreset import AutoResetWrapper
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
+from stable_baselines3.common.utils import set_random_seed
 from lvps.gym.rbean_utils import evaluate, SB3Agent
 import warnings
 warnings.filterwarnings('ignore')
@@ -34,8 +36,11 @@ class TrainA2C:
         self.__eval_callback = None
 
     def __create_environments (self, env_id):
-        self.__base_env = make_vec_env('lvps/Search-v0', n_envs=4, wrapper_class=self.__wrap_env)
-        self.__eval_env = make_vec_env('lvps/Search-v0', n_envs=4, wrapper_class=self.__wrap_env)
+        num_cpu = 4
+        #self.__base_env = SubprocVecEnv([(self.__wrap_env(gymnasium.make(env_id), i), i) for i in range(num_cpu)])
+        self.__base_env = make_vec_env('lvps/Search-v0', n_envs=num_cpu, wrapper_class=self.__wrap_env)
+        self.__eval_env = make_vec_env('lvps/Search-v0', n_envs=num_cpu, wrapper_class=self.__wrap_env)
+        #self.__eval_env = SubprocVecEnv([(self.__wrap_env(gymnasium.make(env_id), i + 10), i) for i in range(num_cpu)])
         self.__test_env = self.__wrap_env(gymnasium.make(env_id))
 
     def __wrap_env (self, plain_env):
