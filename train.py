@@ -32,11 +32,6 @@ class Train:
         # create new instances of the environment
         self.__create_environments('lvps/Search-v0')
 
-        if os.path.exists(f'{model_dir}/evaluation/'):
-            shutil.rmtree(f'{model_dir}/evaluation/')
-        if os.path.exists(f'{model_dir}/final/'):
-            shutil.rmtree(f'{model_dir}/final/')
-
         self.__eval_callback = None
 
     def __create_environments (self, env_id):
@@ -66,17 +61,37 @@ class Train:
 
             policy_kwargs = dict(net_arch=[128,128,64]),
             verbose=1,
-            seed=1
+            seed=1,
+            tensorboard_log=f'{self.__model_dir}/tensorboard_log/'
         )
 
+    def continue_training(self):
+        model = DQN.load(f'{self.__model_dir}/evaluation/best_model.zip')
+        self.__recreate_eval_callback(self.__eval_env)
+
+        model.learn(
+            total_timesteps=self.__max_total_steps,
+            callback=self.__eval_callback,
+            log_interval=50,
+            progress_bar=True,
+            reset_num_timesteps=True
+        )
+        model.save(f'{self.__model_dir}/final/model')
 
     def train (self):
         logging.getLogger(__name__).info ("Training a new agent...")
+
+        # clean up previous training
+        if os.path.exists(f'{self.__model_dir}/evaluation/'):
+            shutil.rmtree(f'{self.__model_dir}/evaluation/')
+        if os.path.exists(f'{self.__model_dir}/final/'):
+            shutil.rmtree(f'{self.__model_dir}/final/')
+
         # create a new empty model
         model = self.__create_empty_model(self.__base_env)
         self.__recreate_eval_callback(self.__eval_env)
 
-        model = model.learn(total_timesteps=self.__max_total_steps, callback=self.__eval_callback, log_interval=1, progress_bar=True)
+        model = model.learn(total_timesteps=self.__max_total_steps, callback=self.__eval_callback, log_interval=50, progress_bar=True)
         model.save(f'{self.__model_dir}/final/model')
 
     def test_best (self):

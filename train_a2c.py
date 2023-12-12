@@ -31,10 +31,6 @@ class TrainA2C:
         # create new instances of the environment
         self.__create_environments('lvps/Search-v0')
 
-        if os.path.exists(f'{model_dir}/evaluation/'):
-            shutil.rmtree(f'{model_dir}/evaluation/')
-        if os.path.exists(f'{model_dir}/final/'):
-            shutil.rmtree(f'{model_dir}/final/')
         self.__eval_callback = None
 
     def __create_environments (self, env_id):
@@ -49,34 +45,42 @@ class TrainA2C:
         return A2C(
             policy = "CnnPolicy",#"MlpPolicy",
             env = base_env,
-            #learning_rate = 4e-3, # original 4e-3
-
-            #buffer_size = 4_000, # original 10k
-            #learning_starts = 0, # original 0
-
             gamma = 0.98, # original 0.98
-            #target_update_interval = 600, # original 600
-            #train_freq = 16, # original 16
-            #gradient_steps = 8, # original 8
-
-            #exploration_fraction = 0.2, # original 0.2
-            #exploration_initial_eps = 1.0, # original 1.0
-            #exploration_final_eps = 0.07, # original 0.07
-
-            #policy_kwargs = dict(net_arch=[256,128,64]),
             verbose=1,
-            seed=1
+            seed=1,
+            tensorboard_log=f'{self.__model_dir}/tensorboard_log/'
         )
 
 
     def train (self):
         logging.getLogger(__name__).info ("Training a new A2C agent...")
+
+        # clean up previous training
+        if os.path.exists(f'{self.__model_dir}/evaluation/'):
+            shutil.rmtree(f'{self.__model_dir}/evaluation/')
+        if os.path.exists(f'{self.__model_dir}/final/'):
+            shutil.rmtree(f'{self.__model_dir}/final/')
+
         # create a new empty model
         model = self.__create_empty_model(self.__base_env)
         self.__recreate_eval_callback(self.__eval_env)
 
         model = model.learn(total_timesteps=self.__max_total_steps, callback=self.__eval_callback, log_interval=1, progress_bar=True)
         model.save(f'{self.__model_dir}/final/model')
+
+    def continue_training(self):
+        model = A2C.load(f'{self.__model_dir}/evaluation/best_model.zip')
+        self.__recreate_eval_callback(self.__eval_env)
+
+        model.learn(
+            total_timesteps=self.__max_total_steps,
+            callback=self.__eval_callback,
+            log_interval=50,
+            progress_bar=True,
+            reset_num_timesteps=True
+        )
+        model.save(f'{self.__model_dir}/final/model')
+
 
     def test_best (self):
         logging.getLogger(__name__).info ("Testing agent...")
