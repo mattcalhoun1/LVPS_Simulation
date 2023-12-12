@@ -36,7 +36,7 @@ class TrainA2C:
         self.__eval_callback = None
 
     def __create_environments (self, env_id):
-        num_cpu = 4
+        num_cpu = 1
         #self.__base_env = SubprocVecEnv([(self.__wrap_env(gymnasium.make(env_id), i), i) for i in range(num_cpu)])
         self.__base_env = make_vec_env('lvps/Search-v0', n_envs=num_cpu, wrapper_class=self.__wrap_env)
         self.__eval_env = make_vec_env('lvps/Search-v0', n_envs=num_cpu, wrapper_class=self.__wrap_env)
@@ -103,7 +103,7 @@ class TrainA2C:
 
     def __recreate_eval_callback(self, environment):
         self.__eval_callback = EvalCallback(
-            environment, eval_freq=1000,
+            environment, eval_freq=10000,
             best_model_save_path=f'{self.__model_dir}/evaluation/',
             log_path=f'{self.__model_dir}/evaluation/',
             warn=False,
