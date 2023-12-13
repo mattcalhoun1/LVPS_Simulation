@@ -47,7 +47,7 @@ class Train:
             #learning_rate = 4e-3, # original 4e-3
 
             batch_size = 128, # original 128
-            buffer_size = 5000, # original 4k. However, memory is contained in the observation image, so do we need a buffer?
+            buffer_size = 100000, # original 4k. However, memory is contained in the observation image, so do we need a buffer?
             learning_starts = 0, # original 0
 
             gamma = 0.98, # original 0.98
