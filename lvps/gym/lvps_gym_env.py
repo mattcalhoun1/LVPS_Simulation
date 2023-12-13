@@ -63,6 +63,11 @@ class LvpsGymEnv(gym.Env):
         self.__update_agent_coords(agent=self.__training_agent, force_refresh=False)
         action_method = self.__get_action_method(self.__training_agent, action)
         action_result = action_method()
+        self.__execute_auto_follow_ups(
+            agent = self.__training_agent,
+            latest_action=action,
+            latest_result=action_result
+        )
         
         self.__update_agent_coords(agent=self.__training_agent, force_refresh=True)
         agent_step_targets_found = len(self.__found_targets)
@@ -93,6 +98,11 @@ class LvpsGymEnv(gym.Env):
                 drone_result = drone_method(next_drone_params)
             else:
                 drone_result = drone_method()
+            self.__execute_auto_follow_ups(
+                agent = d,
+                latest_action=next_drone_action,
+                latest_result=drone_result
+            )
             self.__drone_last_action[d.get_id()] = next_drone_action
             self.__drone_last_result[d.get_id()] = drone_result
             self.__update_agent_coords(agent=d, force_refresh=True)
@@ -117,6 +127,12 @@ class LvpsGymEnv(gym.Env):
             end_nearest_unfound_target_id=end_nearest_unfound_target_id,
             end_nearest_unfound_target_dist=end_nearest_unfound_target_dist,
             is_within_photo_distance=end_nearest_unfound_target_dist is not None and end_nearest_unfound_target_dist <= self.__training_agent.get_photo_distance()
+        )
+
+        self.__execute_auto_follow_ups(
+            agent = self.__training_agent,
+            latest_action=action,
+            latest_result=action_result
         )
 
         terminated = len(self.__found_targets) == self.__num_targets
@@ -158,7 +174,11 @@ class LvpsGymEnv(gym.Env):
         }
 
         if type(action_num) is np.array or type(action_num) is np.ndarray:
+            logging.getLogger(__name__).info(f"Selected action is: {AgentActions.Names[action_num.max()]}")
             return action_map[action_num.max()]
+        
+
+        logging.getLogger(__name__).info(f"Selected action is: {AgentActions.Names[action_num]}")
 
         return action_map[action_num]
 
@@ -202,6 +222,20 @@ class LvpsGymEnv(gym.Env):
             filtered_action_params = action_params
 
         return action_map[action_num], filtered_action_params
+
+    def __execute_auto_follow_ups (self, agent : SimulatedAgent, latest_action, latest_result):
+        if type(latest_action) is np.array or type(latest_action) is np.ndarray:
+            latest_action = latest_action.max()
+                
+        if latest_action == AgentActions.Photograph and latest_result == True:
+            logging.getLogger(__name__).info(f"Auto-executing target found report for agent {agent.get_id()}")
+            # a successful photograph was taken, report it
+            report_success = False
+            retries = 0
+            max_retries = 5
+            while (report_success == False and retries < max_retries):
+                report_success = agent.report_found()
+                retries += 1
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
