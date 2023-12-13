@@ -174,12 +174,8 @@ class LvpsGymEnv(gym.Env):
         }
 
         if type(action_num) is np.array or type(action_num) is np.ndarray:
-            logging.getLogger(__name__).info(f"Selected action is: {AgentActions.Names[action_num.max()]}")
             return action_map[action_num.max()]
         
-
-        logging.getLogger(__name__).info(f"Selected action is: {AgentActions.Names[action_num]}")
-
         return action_map[action_num]
 
     # drone has an extended set of actions
@@ -218,10 +214,16 @@ class LvpsGymEnv(gym.Env):
             AgentActions.Strafe,
         ]
         filtered_action_params = None
-        if action_num in actions_with_params:
+        safe_action_num = action_num
+
+        if type(action_num) is np.array or type(action_num) is np.ndarray:
+            safe_action_num = action_num.max()
+
+        if safe_action_num in actions_with_params:
             filtered_action_params = action_params
 
-        return action_map[action_num], filtered_action_params
+
+        return action_map[safe_action_num], filtered_action_params
 
     def __execute_auto_follow_ups (self, agent : SimulatedAgent, latest_action, latest_result):
         if type(latest_action) is np.array or type(latest_action) is np.ndarray:
