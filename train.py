@@ -26,7 +26,7 @@ class Train:
         self.__model_dir = model_dir
         self.__max_episode_steps = 1000 # max steps per episode
         self.__max_test_steps = 1000 # max steps per episode
-        self.__max_total_steps = 1_000_000
+        self.__max_total_steps = 3_000_000
         self.__test_episodes = 3
 
         # create new instances of the environment
@@ -114,7 +114,7 @@ class Train:
             best_model_save_path=f'{self.__model_dir}/evaluation/',
             log_path=f'{self.__model_dir}/evaluation/',
             warn=False,
-            n_eval_episodes=2
+            n_eval_episodes=4
         )        
 
     #def check_env (self):
