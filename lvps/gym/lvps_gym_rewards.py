@@ -11,6 +11,8 @@ class RewardAmounts:
 
     FalseReport = -.1
 
+    Delay = -.1
+
     SuccessfulLook = 10
     SuccessfulCloserLook = 10
     SuccessfulPhotoDistance = 30
@@ -29,6 +31,9 @@ class LvpsGymRewards:
         self.__target_photo_distance_counts = {}
         self.__target_photo_counts = {}
         self.__target_last_dist = {}
+
+        self.__last_action_performed = None
+        self.__last_action_result = None
 
     
     def calculate_reward (self, action_performed, action_result, target_found : bool, target_found_by_this_agent : bool, all_targets_found : bool, beg_nearest_unfound_target_id, beg_nearest_unfound_target_dist : float, end_nearest_unfound_target_id, end_nearest_unfound_target_dist : float, is_within_photo_distance : bool):
@@ -96,5 +101,8 @@ class LvpsGymRewards:
         if all_targets_found:
             logging.getLogger(__name__).info(f"Agent rewarded for all targets found")
             reward += RewardAmounts.AllTargetsFound
+
+        self.__last_action_performed = action_performed
+        self.__last_action_result = action_result
 
         return reward

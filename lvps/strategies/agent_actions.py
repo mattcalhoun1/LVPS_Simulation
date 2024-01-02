@@ -82,9 +82,9 @@ class AgentActions:
 
     StepCost = {
         Go : 1,
-        Look : 1,
+        Look : 2,
         Rotate : 1,
-        Photograph : 1,
+        Photograph : 2,
         EstimatePosition : 1,
         Nothing : 1,
         ReportFound : 1,
