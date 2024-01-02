@@ -85,10 +85,10 @@ class LvpsGymRewards:
 
 
         if action_performed == AgentActions.Photograph and action_result == True:
-            if end_nearest_unfound_target_id not in self.__target_photo_counts:
-                logging.getLogger(__name__).info(f"Agent rewarded for photo of {end_nearest_unfound_target_id}")
+            if beg_nearest_unfound_target_id not in self.__target_photo_counts:
+                logging.getLogger(__name__).info(f"Agent rewarded for photo of {beg_nearest_unfound_target_id}")
                 reward += RewardAmounts.SuccessfulPhotograph
-                self.__target_photo_counts[end_nearest_unfound_target_id] = 1
+                self.__target_photo_counts[beg_nearest_unfound_target_id] = 1
 
         if target_found:
             logging.getLogger(__name__).info(f"Agent rewarded for target find (across all agents)")
