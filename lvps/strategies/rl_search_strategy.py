@@ -31,7 +31,7 @@ class RLSearchStrategy(AgentStrategy):
         self.__gym_env = LvpsGymEnv()
         self.__gym_env_initialized = False
 
-        self.__rl_model = DQN.load(model_file)#, device=device, print_system_info=True, env=LvpsGymEnv(), force_reset=True)
+        self.__rl_model = DQN.load(model_file)#, device=self.__device, print_system_info=True, env=LvpsGymEnv(), force_reset=True)
         self.__rl_model.set_logger(logging.getLogger(__name__))
         self.__gym_env.reset()
         #self.__rl_model.batch_size = 1
@@ -42,6 +42,7 @@ class RLSearchStrategy(AgentStrategy):
     def __predict_proba(self, model, obs):
         #obs_tensor = obs_as_tensor(obs, model.policy.device)
         #dis = model.policy.get_distribution(obs)
+        #logging.getLogger(__name__).info(f"DIs: {dis}")
 
         reordered_obs = np.transpose(obs, (2,0,1))
 
@@ -71,7 +72,7 @@ class RLSearchStrategy(AgentStrategy):
             dpi=self.__observation_image_dpi
         )
 
-        # get the agent's perspecive rendering as the observation
+        # get the agent's perspective rendering as the observation
         obs = lvps_agent.get_field_renderer().render_field_image_to_array(
             add_game_state=True,
             agent_id=lvps_agent.get_id(),
@@ -97,7 +98,7 @@ class RLSearchStrategy(AgentStrategy):
         logging.getLogger(__name__).info(f"RL Probs: {AgentActions.Names[probs.max()]}")
 
         action, _states = self.__rl_model.predict(obs, {}, deterministic = True)
-        #logging.getLogger(__name__).info(f"RL Model returned type: {type(action)}, shape: {action.shape} -  {action}, {_states}")        
+        logging.getLogger(__name__).info(f"RL Model returned type: {type(action)}, shape: {action.shape} -  {action}, {_states}")        
         selected_action = action
         if type(action) is np.array or type(action) is np.ndarray:
             selected_action = action.max()

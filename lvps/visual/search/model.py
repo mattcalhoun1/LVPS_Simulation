@@ -187,7 +187,7 @@ class AutonomousSearch(mesa.Model):
     def __get_agent_strategy (self):
         #return RandomSearchStrategy()
         #return ReasonableSearchStrategy(render_field=False)
-        return RLSearchStrategy(environment=self.__lvps_env, model_file='/home/matt/projects/lvps_rl_models/bw/best_model.zip')
+        return RLSearchStrategy(environment=self.__lvps_env, model_file='/home/matt/projects/lvps_rl_models/bw_3m/best_model.zip')
         #return RLSearchStrategy(environment=self.__lvps_env, model_file='/home/matt/projects/LVPS_Simulation/models/final/model.zip')
 
     def step(self):

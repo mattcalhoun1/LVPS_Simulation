@@ -3,7 +3,7 @@ import logging
 import numpy as np
 
 class RewardAmounts:
-    StepCostMultiplier = 0.0 # to scale costs down , if desired
+    StepCostMultiplier = 0.01 # to scale costs down , if desired
 
     OutOfBounds = -.1
     Collision = -.1
